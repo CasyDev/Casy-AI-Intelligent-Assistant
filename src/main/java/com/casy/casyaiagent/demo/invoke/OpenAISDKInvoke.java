@@ -1,11 +1,14 @@
 package com.casy.casyaiagent.demo.invoke;
 
-import com.alibaba.dashscope.aigc.completion.ChatCompletion;
+import com.openai.client.OpenAIClient;
+import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.models.ChatCompletion;
+import com.openai.models.ChatCompletionCreateParams;
 
-public class Main {
+public class OpenAISDKInvoke {
     public static void main(String[] args) {
         OpenAIClient client = OpenAIOkHttpClient.builder()
-                .apiKey(System.getenv("DASHSCOPE_API_KEY"))
+                .apiKey(TestApiKey.API_KEY)
                 .baseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1")
                 .build();
 

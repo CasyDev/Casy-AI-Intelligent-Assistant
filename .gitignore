@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### 忽略本地配置 ###
+src/main/resources/application-local.yml
+
+### 忽略特定的类 ###
+src/main/java/com/casy/casyaiagent/demo/invoke/TestApiKey.java
