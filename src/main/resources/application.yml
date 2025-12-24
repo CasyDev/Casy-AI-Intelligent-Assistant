@@ -3,11 +3,6 @@ spring:
     active: local
   application:
     name: casy-ai-agent
-  ai:
-    chat:
-      memory:
-        repository:
-          jdbc:
 
 server:
   port: 8123

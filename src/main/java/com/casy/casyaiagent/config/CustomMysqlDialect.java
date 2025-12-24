@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 /**
  * 自定义的PostgreSQL方言实现，支持自定义表名。
  * 本实现假设表结构包含以下字段：id, conversation_id, message_order, role, content, created_at
+ * @author linlin
  */
 @Component // 可注册为Spring组件，方便注入
 public class CustomMysqlDialect implements JdbcChatMemoryRepositoryDialect {
