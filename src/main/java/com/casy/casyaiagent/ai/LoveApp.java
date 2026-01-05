@@ -3,14 +3,11 @@ package com.casy.casyaiagent.ai;
 import ch.qos.logback.classic.Logger;
 import com.casy.casyaiagent.advisor.PromptLoggingAdvisor;
 import com.casy.casyaiagent.advisor.ReReadingAdvisor;
-import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
@@ -29,15 +26,13 @@ public class LoveApp {
             "引导用户详述事情经过、对方反应及自身想法，以便给出专属解决方案。";
 
     public LoveApp(ChatModel dashscopChatModel, MessageChatMemoryAdvisor chatMemoryAdvisor) {
-        //初始化基于内存的对话记忆
         chatClient = ChatClient.builder(dashscopChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(
                         chatMemoryAdvisor,//对话记忆
-                        new PromptLoggingAdvisor(),//自定义日志
-                        new ReReadingAdvisor() //重读Advisor，提高ai的准确性，但增加token的消耗
+                        new PromptLoggingAdvisor()//自定义日志
+//                        new ReReadingAdvisor() //重读Advisor，提高ai的准确性，但增加token的消耗
                 ).build();
-        System.out.println("初始化基于内存的对话记忆");
     }
 
     public String doChat(String message, String chatId){

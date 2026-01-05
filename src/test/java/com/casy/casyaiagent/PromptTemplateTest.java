@@ -14,7 +14,7 @@ import java.util.Map;
 public class PromptTemplateTest {
     public static void main(String[] args) {
         PromptTemplate promptTemplate = PromptTemplate.builder()
-                .renderer(StTemplateRenderer.builder().startDelimiterToken('+').endDelimiterToken('>').build())
+                .renderer(StTemplateRenderer.builder().startDelimiterToken('+').endDelimiterToken('>').build()) //这个是指定替换的符号
                 .template("""
             Tell me the names of 5 movies whose soundtrack was composed by +composer>.
             """)
