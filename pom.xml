@@ -31,10 +31,11 @@
     </properties>
     <dependencyManagement>
         <dependencies>
+            <!--  Spring AI 框架提供的依赖版本管理工具 -->
             <dependency>
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
-                <version>1.0.0</version>
+                <version>1.1.2</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -77,7 +78,6 @@
         </dependency>
 
 
-
         <!--DashScope SDK-->
         <!-- https://mvnrepository.com/artifact/com.alibaba/dashscope-sdk-java -->
         <dependency>
@@ -101,11 +101,11 @@
         </dependency>
 
         <!--springAI接入ollama-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.ai</groupId>-->
-<!--            <artifactId>spring-ai-ollama-spring-boot-starter</artifactId>-->
-<!--            <version>1.0.0-M6</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.springframework.ai</groupId>-->
+        <!--            <artifactId>spring-ai-ollama-spring-boot-starter</artifactId>-->
+        <!--            <version>1.0.0-M6</version>-->
+        <!--        </dependency>-->
 
         <!--mock模拟测试-->
         <dependency>
@@ -116,22 +116,35 @@
         </dependency>
 
         <!--springAlibabaAi-->
+        <!-- Spring AI Alibaba Agent Framework -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-agent-framework</artifactId>
-            <version>1.1.0.0-M5</version>
+            <version>1.1.0.0-RC2</version>
         </dependency>
 
+        <!-- DashScope ChatModel 支持（如果使用其他模型，请跳转 Spring AI 文档选择对应的 starter） -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
-            <version>1.1.0.0-M5</version>
+            <version>1.1.0.0-RC2</version>
         </dependency>
 
         <!--jdbc对话记忆持久化-->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-chat-memory-repository-jdbc</artifactId>
+        </dependency>
+
+        <!-- markdown文档解析器 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-markdown-document-reader</artifactId>
+        </dependency>
+        <!--向量存储，To use the QuestionAnswerAdvisor or VectorStoreChatMemoryAdvisor-->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-advisors-vector-store</artifactId>
         </dependency>
 
         <!--mysql-->

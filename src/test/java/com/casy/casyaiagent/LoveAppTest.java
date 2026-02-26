@@ -33,4 +33,23 @@ class LoveAppTest {
         answer = loveApp.doChat(message, chatId);
         Assertions.assertNotNull(answer);
     }
+
+    @Test
+    void doChatWithRag() {
+//        String chatId = UUID.randomUUID().toString();
+//        String message = "我已经结婚了，但是婚后关系不太亲密，怎么办？";
+//        String answer =  loveApp.doChatWithRag(message, chatId);
+//        Assertions.assertNotNull(answer);
+
+
+//        message = "我目前处于什么婚因状态？你好好想想，我已经告诉你了";
+//        answer =  loveApp.doChatWithRag(message, chatId);
+//        Assertions.assertNotNull(answer);
+
+        String chatId = UUID.randomUUID().toString();
+        String message = "我是白羊座的，我的恋爱对象可能是什么样的？";
+        String answer =  loveApp.doChatWithRag(message, chatId);
+        Assertions.assertNotNull(answer);
+    }
+
 }
