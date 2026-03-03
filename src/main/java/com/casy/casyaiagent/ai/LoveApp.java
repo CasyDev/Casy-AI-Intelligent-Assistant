@@ -8,6 +8,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -32,6 +34,8 @@ public class LoveApp {
 
     private static final Logger log = (Logger) LoggerFactory.getLogger(LoveApp.class);
 
+//    ChatMemory chatMemory = MessageWindowChatMemory.builder().build();
+
     private static final String SYSTEM_PROMPT = "扮演深耕恋爱心理领域的专家。开场向用户表明身份，告知用户可倾诉恋爱难题。" +
             "围绕单身、恋爱、已婚三种状态提问：单身状态询问社交圈拓展及追求心仪对象的困扰；" +
             "恋爱状态询问沟通、习惯差异引发的矛盾；已婚状态询问家庭责任与亲属关系处理的问题。" +
@@ -55,6 +59,7 @@ public class LoveApp {
         ChatResponse response = chatClient
                 .prompt()
                 .user(message)
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatId))
                 .call()
                 .chatResponse();
         String content = response.getResult().getOutput().getText();
@@ -66,6 +71,7 @@ public class LoveApp {
         ChatResponse chatResponse = chatClient
                 .prompt()
                 .user(message)
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatId))
                 // .advisors(loveAppPromptTemplate.getAdvisor(loveAppVectorStore)) // 自定义对话模板，告诉AI必须使用检索出来的内容进行回答
                 // 应用知识库问答, 本地的rag增强
                  .advisors(QuestionAnswerAdvisor.builder(loveAppVectorStore).build())

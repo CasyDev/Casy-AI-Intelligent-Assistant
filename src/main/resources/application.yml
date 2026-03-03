@@ -5,18 +5,22 @@ spring:
     name: casy-ai-agent
   # 数据库配置
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/casy-ai?allowMultiQueries=true
-    username: root
-    password: root
+    # mysql配置
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://localhost:3306/casy-ai?allowMultiQueries=true
+#    username: root
+#    password: root
+     driver-class-name: org.postgresql.Driver
+     url: jdbc:postgresql://pgm-2zej9ksewfj9yw903o.rwlb.rds.aliyuncs.com:5432/casy_aip_agent
+     username: my_user
+     password: Hxb@93393
   ai:
     chat:
       memory:
         repository:
           jdbc:
             initialize-schema: always
-
-
+            schema: classpath:/sql/schema-postgresql.sql # 无效？？
 
 server:
   port: 8123
