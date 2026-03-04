@@ -17,8 +17,8 @@ public class ChatMemoryConfig {
     public JdbcChatMemoryRepositoryDialect customDialect() {
         // 将 "my_custom_chat_memory" 替换为您想要的表名
         //return new CustomMysqlChatMemoryDialect("my_custom_chat_memory");
-//        return new MysqlChatMemoryRepositoryDialect();
-        return new PostgresChatMemoryRepositoryDialect();
+        return new MysqlChatMemoryRepositoryDialect();
+//        return new PostgresChatMemoryRepositoryDialect();
 //        return new MyPostgresChatMemoryRepositoryDialect();
     }
 

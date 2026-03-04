@@ -7,10 +7,7 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
 
 /**
- * @author Administrator
- * @version 1.0
- * @description:
- * @date 2026/1/19 21:54
+ * 自定义的AI对话提示词模板
  */
 @Component
 public class LoveAppPromptTemplate {

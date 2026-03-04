@@ -1,4 +1,4 @@
-package com.casy.casyaiagent.config;
+package com.casy.casyaiagent.rag;
 
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
@@ -12,6 +12,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * 百炼平台云知识库（云RAG服务）
+ */
 @Configuration
 @Slf4j
 class LoveAppRagCloudAdvisorConfig {
