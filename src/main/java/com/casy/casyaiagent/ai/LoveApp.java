@@ -11,6 +11,11 @@ import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvi
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
+import org.springframework.ai.rag.generation.augmentation.ContextualQueryAugmenter;
+import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
+import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
 
@@ -48,13 +53,37 @@ public class LoveApp {
         this.loveAppVectorStore = loveAppVectorStore;
         this.loveAppRagCloudAdvisor = loveAppRagCloudAdvisor;
         this.pgVectorVectorStore = pgVectorVectorStore;
+        // var 是 Java 10 引入的局部变量类型推断关键字，核心作用是让编译器根据变量赋值语句的右侧表达式，自动推断出局部变量的具体类型，从而简化代码书写
+        var qaAdvisor = QuestionAnswerAdvisor.builder(loveAppVectorStore)
+                // 相似度阈值为 0.8，并返回最相关的前 6 个结果
+                .searchRequest(SearchRequest.builder().similarityThreshold(0.8d).topK(6).build()) //相似阈值和前几个
+                .build();
+
+        // RetrievalAugmentationAdvisor是功能更强大的QuestionAnswerAdvisor支持高级的RAG流程比如结合查询转换器
+        Advisor retrievalAugmentationAdvisor = RetrievalAugmentationAdvisor.builder()
+                .queryTransformers(RewriteQueryTransformer.builder()
+                        .chatClientBuilder(ChatClient.builder(dashscopChatModel).build().mutate())
+                        .build())
+                .documentRetriever(VectorStoreDocumentRetriever.builder()
+                        .similarityThreshold(0.50)
+                        .vectorStore(loveAppVectorStore)
+                        .build())
+                .queryAugmenter(ContextualQueryAugmenter.builder() // ContextualQueryAugmenter空上下文处理，为空给出友好提示
+                        // .promptTemplate(customProptTemplate) // 可以自定义提示词模板
+                        .allowEmptyContext(true) // 为true允许模型在没有找到相关文档的情况下也生成回答
+                        .build())
+                .build();
+
+
         chatClient = ChatClient.builder(dashscopChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(
                         chatMemoryAdvisor,//对话记忆
                         new PromptLoggingAdvisor() //自定义日志
 //                        new ReReadingAdvisor() //重读Advisor，提高ai的准确性，但增加token的消耗
-                ).build();
+//                        ,qaAdvisor // QuestionAnswerAdvisor的默认实现和自定义searchRequest以实现更灵活的查询
+                )
+                .build();
     }
 
     public String doChat(String message, String chatId) {
@@ -81,10 +110,12 @@ public class LoveApp {
                 // .advisors(loveAppRagCloudAdvisor)
                 // 应用增强检索服务（pgVector）
                 // .advisors(QuestionAnswerAdvisor.builder(pgVectorVectorStore).build())
+                // .advisors(a -> a.param(QuestionAnswerAdvisor.FILTER_EXPRESSION, "type == 'web'")) // 运行时添加查询过滤表达式
                 .advisors()
                 .call()
                 .chatResponse();
         return chatResponse.getResult().getOutput().getText();
     }
+
 
 }

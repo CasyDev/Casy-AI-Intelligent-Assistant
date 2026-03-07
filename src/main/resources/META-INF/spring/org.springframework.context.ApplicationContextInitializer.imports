@@ -1,0 +1,4 @@
+# ApplicationContextInitializer 是 Spring 的扩展接口，SpringBoot 不会像扫描 @Component 注解类那样自动发现并加载它，必须通过显式注册才能让它在启动时被调用
+# 也可在启动类和ymal配置文件中配置
+# 经测试import和ymal无用,在启动类中配置
+com.casy.casyaiagent.util.GlobalSpringContextInitializer

@@ -1,4 +1,4 @@
-package com.casy.casyaiagent.config;
+package com.casy.casyaiagent.rag;
 
 import com.casy.casyaiagent.rag.LoveAppDocumentLoader;
 import jakarta.annotation.PostConstruct;

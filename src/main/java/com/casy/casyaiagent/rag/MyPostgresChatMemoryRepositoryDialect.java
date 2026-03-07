@@ -1,4 +1,4 @@
-package com.casy.casyaiagent.config;
+package com.casy.casyaiagent.rag;
 
 import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepositoryDialect;
 
