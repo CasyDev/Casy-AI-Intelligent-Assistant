@@ -1,4 +1,4 @@
-package com.casy.casyaiagent.rag;
+package com.casy.casyaiagent.rag.config;
 
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;

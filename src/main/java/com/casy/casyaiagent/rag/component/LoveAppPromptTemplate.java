@@ -1,4 +1,4 @@
-package com.casy.casyaiagent.rag;
+package com.casy.casyaiagent.rag.component;
 
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.prompt.PromptTemplate;

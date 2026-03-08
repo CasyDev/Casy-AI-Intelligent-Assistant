@@ -1,8 +1,8 @@
-package com.casy.casyaiagent.rag;
+package com.casy.casyaiagent.rag.config;
 
 import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingModel;
 import com.casy.casyaiagent.constant.Global;
-import com.casy.casyaiagent.rag.component.MyTokenTextSplitter;
+import com.casy.casyaiagent.rag.component.LoveAppDocumentLoader;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;

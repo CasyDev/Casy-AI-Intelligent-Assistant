@@ -1,4 +1,4 @@
-package com.casy.casyaiagent.rag;
+package com.casy.casyaiagent.rag.component;
 
 import ch.qos.logback.classic.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +54,7 @@ public class LoveAppDocumentLoader {
             for (Resource resource : resources) {
                 String filename = resource.getFilename();
                 // 取文件名中的婚姻状态信息
-                String status = !filename.contains("篇") ? "分类推荐" : filename.substring(filename.indexOf("篇") - 3, filename.indexOf("篇"));
+                String status = !filename.contains("篇") ? "分类推荐" : filename.substring(filename.indexOf("篇") - 2, filename.indexOf("篇"));
                 MarkdownDocumentReaderConfig config = MarkdownDocumentReaderConfig.builder()
                         .withHorizontalRuleCreateDocument(true) // Markdown 中的水平规则将创建新的 Document 对象
                         .withIncludeCodeBlock(false) // 不为代码块创建新的document对象

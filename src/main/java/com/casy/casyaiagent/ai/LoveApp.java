@@ -2,7 +2,11 @@ package com.casy.casyaiagent.ai;
 
 import ch.qos.logback.classic.Logger;
 import com.casy.casyaiagent.advisor.PromptLoggingAdvisor;
-import com.casy.casyaiagent.rag.LoveAppPromptTemplate;
+import com.casy.casyaiagent.constant.Global;
+import com.casy.casyaiagent.rag.component.LoveAppPromptTemplate;
+import com.casy.casyaiagent.rag.factory.LoveAppContextualQueryAugmenterFactory;
+import com.casy.casyaiagent.rag.factory.LoveAppRagCustomAdvisorFactory;
+import com.casy.casyaiagent.rag.component.QueryRewriter;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -14,6 +18,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
 import org.springframework.ai.rag.generation.augmentation.ContextualQueryAugmenter;
 import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
+import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
 import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -117,5 +122,46 @@ public class LoveApp {
         return chatResponse.getResult().getOutput().getText();
     }
 
+    /**
+     * 使用查询重写
+     */
+    public String doChatWithRagForQueryRewriter(String message, String chatId) {
+        // 查询重写
+        String rewrittenMessage =  Global.getBean(QueryRewriter.class).doQueryRewrite(message);
+        ChatResponse chatResponse = chatClient
+                .prompt()
+                .user(rewrittenMessage)
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatId))
+                .call()
+                .chatResponse();
+        return chatResponse.getResult().getOutput().getText();
+    }
 
+    /**
+     * 指定婚姻状态的类别过滤文档
+     */
+    public String doChatWithRagForQueryFilterExpression(String message, String chatId) {
+        ChatResponse chatResponse = chatClient
+                .prompt()
+                .advisors(LoveAppRagCustomAdvisorFactory.createLoveAppRagCustomAdvisor(loveAppVectorStore, "已婚"))
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatId))
+                .user(message)
+                .call()
+                .chatResponse();
+        return chatResponse.getResult().getOutput().getText();
+    }
+
+    /**
+     * 自定义空上下文处理
+     */
+    public String doChatWithRagForContextualQuery(String message, String chatId) {
+        ChatResponse chatResponse = chatClient
+                .prompt()
+                .advisors(LoveAppRagCustomAdvisorFactory.createLoveAppRagCustomAdvisor(loveAppVectorStore, "单身"))// 问题并不属于单身问题
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatId))
+                .user(message)
+                .call()
+                .chatResponse();
+        return chatResponse.getResult().getOutput().getText();
+    }
 }
