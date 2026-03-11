@@ -39,9 +39,14 @@ class LoveAppTest {
     void doChatWithRag() {
         // 测试
         String chatId = UUID.randomUUID().toString();
-        String message = "我已经结婚了，但是婚后关系不太亲密，怎么办？";
-        String answer =  loveApp.doChatWithRagForContextualQuery(message, chatId);
+        String message = "I'm married, but we haven't been very close since we got married. What should I do?";
+        String answer =  loveApp.doChatWithRagForBaiduTranslation(message, chatId, "已婚", true);
         Assertions.assertNotNull(answer);
+
+//        String chatId = UUID.randomUUID().toString();
+//        String message = "我已经结婚了，但是婚后关系不太亲密，怎么办？";
+//        String answer =  loveApp.doChatWithRagForContextualQuery(message, chatId);
+//        Assertions.assertNotNull(answer);
 
 //        String chatId = UUID.randomUUID().toString();
 //        String message = "我已经结婚了，但是婚后关系不太亲密，怎么办？";

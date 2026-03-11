@@ -3,10 +3,12 @@ package com.casy.casyaiagent.ai;
 import ch.qos.logback.classic.Logger;
 import com.casy.casyaiagent.advisor.PromptLoggingAdvisor;
 import com.casy.casyaiagent.constant.Global;
+import com.casy.casyaiagent.rag.component.BaiduTranslationQueryTransformer;
 import com.casy.casyaiagent.rag.component.LoveAppPromptTemplate;
 import com.casy.casyaiagent.rag.factory.LoveAppContextualQueryAugmenterFactory;
 import com.casy.casyaiagent.rag.factory.LoveAppRagCustomAdvisorFactory;
 import com.casy.casyaiagent.rag.component.QueryRewriter;
+import com.casy.casyaiagent.service.BaiduTranslationService;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -15,6 +17,7 @@ import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvi
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.rag.Query;
 import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
 import org.springframework.ai.rag.generation.augmentation.ContextualQueryAugmenter;
 import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
@@ -158,6 +161,24 @@ public class LoveApp {
         ChatResponse chatResponse = chatClient
                 .prompt()
                 .advisors(LoveAppRagCustomAdvisorFactory.createLoveAppRagCustomAdvisor(loveAppVectorStore, "单身"))// 问题并不属于单身问题
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatId))
+                .user(message)
+                .call()
+                .chatResponse();
+        return chatResponse.getResult().getOutput().getText();
+    }
+
+    /**
+     * 自定义空上下文处理
+     */
+    public String doChatWithRagForBaiduTranslation(String message, String chatId, String type, boolean isTranslation) {
+        if (isTranslation) {
+            Query transform = Global.getBean(BaiduTranslationQueryTransformer.class).transform(new Query(message));
+            message = transform.text();
+        }
+        ChatResponse chatResponse = chatClient
+                .prompt()
+                .advisors(LoveAppRagCustomAdvisorFactory.createLoveAppRagCustomAdvisor(loveAppVectorStore, type))// 问题并不属于单身问题
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatId))
                 .user(message)
                 .call()
