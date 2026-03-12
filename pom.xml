@@ -200,6 +200,14 @@
             <scope>compile</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.sdk</groupId>  <!-- 随便填，只要唯一就行，不用和SDK一致 -->
+            <artifactId>uapi-sdk</artifactId> <!-- 随便填，识别用 -->
+            <version>1.0</version>      <!-- 随便填 -->
+            <scope>system</scope>       <!-- 标记为本地JAR -->
+            <!-- 指向你刚放的JAR包路径，${project.basedir}是项目根目录 -->
+            <systemPath>${project.basedir}/lib/uapi-sdk-java-0.1.10.jar</systemPath>
+        </dependency>
     </dependencies>
 
     <build>
@@ -220,6 +228,8 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <!-- 仅需加这一行：让Spring Boot打包时包含这个本地JAR（避免运行时找不到） -->
+                    <includeSystemScope>true</includeSystemScope>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
