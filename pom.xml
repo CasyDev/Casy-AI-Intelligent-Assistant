@@ -167,6 +167,39 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>9.3.0</scope>
         </dependency>
+
+        <!-- 网页抓取 -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.19.1</version>
+        </dependency>
+
+        <!-- PDF生成 -->
+        <!-- https://mvnrepository.com/artifact/com.itextpdf/itext-core -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>itext-core</artifactId>
+            <version>9.1.0</version>
+            <type>pom</type>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.itextpdf/font-asian -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>font-asian</artifactId>
+            <version>9.1.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 解决添加工具调用之后报错缺少com/github/victools/jsonschema/generator/AnnotationHelper -->
+        <!-- Source: https://mvnrepository.com/artifact/com.github.victools/jsonschema-generator -->
+        <dependency>
+            <groupId>com.github.victools</groupId>
+            <artifactId>jsonschema-generator</artifactId>
+            <version>4.38.0</version>
+            <scope>compile</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

@@ -5,10 +5,8 @@ import com.casy.casyaiagent.advisor.PromptLoggingAdvisor;
 import com.casy.casyaiagent.constant.Global;
 import com.casy.casyaiagent.rag.component.BaiduTranslationQueryTransformer;
 import com.casy.casyaiagent.rag.component.LoveAppPromptTemplate;
-import com.casy.casyaiagent.rag.factory.LoveAppContextualQueryAugmenterFactory;
-import com.casy.casyaiagent.rag.factory.LoveAppRagCustomAdvisorFactory;
 import com.casy.casyaiagent.rag.component.QueryRewriter;
-import com.casy.casyaiagent.service.BaiduTranslationService;
+import com.casy.casyaiagent.rag.factory.LoveAppRagCustomAdvisorFactory;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -21,8 +19,8 @@ import org.springframework.ai.rag.Query;
 import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
 import org.springframework.ai.rag.generation.augmentation.ContextualQueryAugmenter;
 import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
-import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
 import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
@@ -46,6 +44,8 @@ public class LoveApp {
     // 云知识库
     private final Advisor loveAppRagCloudAdvisor;
 
+    private final ToolCallback[] allTools; //工具调用类
+
     private static final Logger log = (Logger) LoggerFactory.getLogger(LoveApp.class);
 
 //    ChatMemory chatMemory = MessageWindowChatMemory.builder().build();
@@ -55,12 +55,16 @@ public class LoveApp {
             "恋爱状态询问沟通、习惯差异引发的矛盾；已婚状态询问家庭责任与亲属关系处理的问题。" +
             "引导用户详述事情经过、对方反应及自身想法，以便给出专属解决方案。";
 
-    public LoveApp(ChatModel dashscopChatModel, MessageChatMemoryAdvisor chatMemoryAdvisor, VectorStore loveAppVectorStore, VectorStore pgVectorVectorStore, LoveAppPromptTemplate loveAppPromptTemplate, Advisor loveAppRagCloudAdvisor) {
+    public LoveApp(ChatModel dashscopChatModel, MessageChatMemoryAdvisor chatMemoryAdvisor,
+                   VectorStore loveAppVectorStore, VectorStore pgVectorVectorStore,
+                   LoveAppPromptTemplate loveAppPromptTemplate, Advisor loveAppRagCloudAdvisor,
+                   ToolCallback[] allTools) {
         this.loveAppPromptTemplate = loveAppPromptTemplate;
         this.chatMemoryAdvisor = chatMemoryAdvisor;
         this.loveAppVectorStore = loveAppVectorStore;
         this.loveAppRagCloudAdvisor = loveAppRagCloudAdvisor;
         this.pgVectorVectorStore = pgVectorVectorStore;
+        this.allTools = allTools;
         // var 是 Java 10 引入的局部变量类型推断关键字，核心作用是让编译器根据变量赋值语句的右侧表达式，自动推断出局部变量的具体类型，从而简化代码书写
         var qaAdvisor = QuestionAnswerAdvisor.builder(loveAppVectorStore)
                 // 相似度阈值为 0.8，并返回最相关的前 6 个结果
@@ -130,7 +134,7 @@ public class LoveApp {
      */
     public String doChatWithRagForQueryRewriter(String message, String chatId) {
         // 查询重写
-        String rewrittenMessage =  Global.getBean(QueryRewriter.class).doQueryRewrite(message);
+        String rewrittenMessage = Global.getBean(QueryRewriter.class).doQueryRewrite(message);
         ChatResponse chatResponse = chatClient
                 .prompt()
                 .user(rewrittenMessage)
@@ -184,5 +188,25 @@ public class LoveApp {
                 .call()
                 .chatResponse();
         return chatResponse.getResult().getOutput().getText();
+    }
+
+    // 使用工具调用
+    public String doChatWithTools(String message, String chatId) {
+        ChatResponse response = chatClient
+                .prompt()
+                .user(message)
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatId))
+                .toolCallbacks(allTools)
+                // 可以传递上下文参数，比如说帮我查询用户信息，这就可以直接拿到用户名，它可以携带任何与当前请求相关的信息，但这些信息 不会传递给 AI 模型，只在应用程序内部使用
+                // 用户认证信息：可以在上下文中传递用户 token，而不暴露给模型
+                // 请求追踪：在上下文中添加请求 ID，便于日志追踪和调试
+                // 自定义配置：根据不同场景传递特定配置参数
+                // 举个应用例子，假如做了一个用户自助退款功能，如果已登录用户跟 AI 说：”我要退款“，AI 就不需要再问用户 “你是谁？”，让用户自己输入退款信息了；而是直接从系统中读取到 userId，在工具调用时根据 userId 操作退款即可。
+                // .toolContext(Map.of("userName", "yupi"))
+                .call()
+                .chatResponse();
+        String content = response.getResult().getOutput().getText();
+        log.info("content: {}", content);
+        return content;
     }
 }
