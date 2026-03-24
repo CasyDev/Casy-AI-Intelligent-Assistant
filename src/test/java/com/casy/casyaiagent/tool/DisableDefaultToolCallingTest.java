@@ -2,6 +2,7 @@ package com.casy.casyaiagent.tool;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.casy.casyaiagent.constant.Global;
+import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
@@ -11,6 +12,7 @@ import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.support.ToolCallbacks;
+import org.springframework.ai.tool.execution.ToolExecutionExceptionProcessor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -29,6 +31,9 @@ public class DisableDefaultToolCallingTest {
 
     @Value("${search-api.api-key}")
     private String searchApiKey;
+
+    @Resource
+    private ToolExecutionExceptionProcessor toolExecutionExceptionProcessor; // 注入自定义处理器
     @Test
     void test() {
         // 配置不自动执行工具
@@ -37,7 +42,8 @@ public class DisableDefaultToolCallingTest {
                 .internalToolExecutionEnabled(false)  // 禁用内部工具执行
                 .build();
         // 创建工具调用管理器
-        ToolCallingManager toolCallingManager = DefaultToolCallingManager.builder().build();
+        // 使用了 DefaultToolCallingManager.builder().build() 直接创建实例，这种方式不会使用 Spring 容器中定义的 ToolExecutionExceptionProcessor,需要手动配置
+        ToolCallingManager toolCallingManager = DefaultToolCallingManager.builder().toolExecutionExceptionProcessor(toolExecutionExceptionProcessor).build();
         // 创建初始提示
         Prompt prompt = new Prompt("现在北京的天气如何？", chatOptions);
         // 发送请求给模型
