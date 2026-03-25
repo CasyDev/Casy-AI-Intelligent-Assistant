@@ -21,6 +21,7 @@ import org.springframework.ai.rag.generation.augmentation.ContextualQueryAugment
 import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
 import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
@@ -44,6 +45,8 @@ public class LoveApp {
     // 云知识库
     private final Advisor loveAppRagCloudAdvisor;
 
+    private ToolCallbackProvider toolCallbackProvider;
+
     private final ToolCallback[] allTools; //工具调用类
 
     private static final Logger log = (Logger) LoggerFactory.getLogger(LoveApp.class);
@@ -58,12 +61,14 @@ public class LoveApp {
     public LoveApp(ChatModel dashscopChatModel, MessageChatMemoryAdvisor chatMemoryAdvisor,
                    VectorStore loveAppVectorStore, VectorStore pgVectorVectorStore,
                    LoveAppPromptTemplate loveAppPromptTemplate, Advisor loveAppRagCloudAdvisor,
+                   ToolCallbackProvider toolCallbackProvider,
                    ToolCallback[] allTools) {
         this.loveAppPromptTemplate = loveAppPromptTemplate;
         this.chatMemoryAdvisor = chatMemoryAdvisor;
         this.loveAppVectorStore = loveAppVectorStore;
         this.loveAppRagCloudAdvisor = loveAppRagCloudAdvisor;
         this.pgVectorVectorStore = pgVectorVectorStore;
+        this.toolCallbackProvider = toolCallbackProvider;
         this.allTools = allTools;
         // var 是 Java 10 引入的局部变量类型推断关键字，核心作用是让编译器根据变量赋值语句的右侧表达式，自动推断出局部变量的具体类型，从而简化代码书写
         var qaAdvisor = QuestionAnswerAdvisor.builder(loveAppVectorStore)
@@ -203,6 +208,19 @@ public class LoveApp {
                 // 自定义配置：根据不同场景传递特定配置参数
                 // 举个应用例子，假如做了一个用户自助退款功能，如果已登录用户跟 AI 说：”我要退款“，AI 就不需要再问用户 “你是谁？”，让用户自己输入退款信息了；而是直接从系统中读取到 userId，在工具调用时根据 userId 操作退款即可。
                 // .toolContext(Map.of("userName", "yupi"))
+                .call()
+                .chatResponse();
+        String content = response.getResult().getOutput().getText();
+        log.info("content: {}", content);
+        return content;
+    }
+
+    public String doChatWithMcp(String message, String chatId) {
+        ChatResponse response = chatClient
+                .prompt()
+                .user(message)
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatId))
+                .toolCallbacks(toolCallbackProvider)
                 .call()
                 .chatResponse();
         String content = response.getResult().getOutput().getText();

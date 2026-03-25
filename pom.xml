@@ -200,6 +200,19 @@
             <scope>compile</scope>
         </dependency>
 
+        <!-- MCP客户端 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-client</artifactId>
+        </dependency>
+
+        <!-- MCP服务端 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server</artifactId>
+        </dependency>
+
+        <!-- uapi使用免费的天气服务，生成环境不建议这样使用 -->
         <dependency>
             <groupId>com.sdk</groupId>  <!-- 随便填，只要唯一就行，不用和SDK一致 -->
             <artifactId>uapi-sdk</artifactId> <!-- 随便填，识别用 -->
