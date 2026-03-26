@@ -212,6 +212,14 @@
             <artifactId>spring-ai-starter-mcp-server</artifactId>
         </dependency>
 
+        <!-- 邮件 -->
+        <!-- SpringBoot 邮件 starter，自动包含 jakarta.mail -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+
         <!-- uapi使用免费的天气服务，生成环境不建议这样使用 -->
         <dependency>
             <groupId>com.sdk</groupId>  <!-- 随便填，只要唯一就行，不用和SDK一致 -->

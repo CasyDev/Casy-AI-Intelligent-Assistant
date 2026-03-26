@@ -1,11 +1,7 @@
 package com.casy.casyaiagent.config;
 
-import com.casy.casyaiagent.tool.FileOperationTool;
-import com.casy.casyaiagent.tool.PDFGenerationTool;
-import com.casy.casyaiagent.tool.ResourceDownloadTool;
-import com.casy.casyaiagent.tool.TerminalOperationTool;
-import com.casy.casyaiagent.tool.WebScrapingTool;
-import com.casy.casyaiagent.tool.WebSearchTool;
+import com.casy.casyaiagent.tool.*;
+import jakarta.annotation.Resource;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +24,10 @@ public class ToolRegistration {
     @Value("${search-api.api-key}")
     private String searchApiKey;
 
+    // 注入 Spring 管理的 OfferMailTool（使用 @Resource 注入 mailSender）
+    @Resource
+    private OfferMailTool offerMailTool;
+
     @Bean
     public ToolCallback[] allTools() {
         FileOperationTool fileOperationTool = new FileOperationTool();
@@ -36,13 +36,16 @@ public class ToolRegistration {
         ResourceDownloadTool resourceDownloadTool = new ResourceDownloadTool();
         TerminalOperationTool terminalOperationTool = new TerminalOperationTool();
         PDFGenerationTool pdfGenerationTool = new PDFGenerationTool();
+        
+        // offerMailTool 直接从 Spring 容器注入，不需要 new
         return ToolCallbacks.from(
             fileOperationTool,
             webSearchTool,
             webScrapingTool,
             resourceDownloadTool,
             terminalOperationTool,
-            pdfGenerationTool
+            pdfGenerationTool,
+            offerMailTool
         );
     }
 }
