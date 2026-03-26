@@ -25,6 +25,12 @@ spring:
       client:
         stdio:
           servers-configuration: classpath:mcp-servers.json # 使用stdio的MCP服务
+#        sse:
+#          connections:
+#            server1:
+#              url: http://localhost:8127 # 测试本地的MCP服务
+
+
       # MCP的文档目录https://java2ai.com/integration/mcps/mcp-client-boot-starter-docs
 #      client:
 #        enabled: true
