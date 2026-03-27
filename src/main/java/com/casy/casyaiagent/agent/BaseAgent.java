@@ -1,9 +1,15 @@
 package com.casy.casyaiagent.agent;
 
 import com.casy.casyaiagent.agent.model.AgentState;
+import com.itextpdf.styledxmlparser.jsoup.internal.StringUtil;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 抽象基础代理类，用于管理代理状态和执行流程。
@@ -26,9 +32,44 @@ public abstract class BaseAgent {
     private AgentState state = AgentState.IDLE;
 
     // 执行控制
-    private int maxSteps = 20;
+    private int maxSteps = 10;
     private int currentStep = 0;
 
     // LLM
     private ChatClient chatClient;
+
+    // Memory（需要自主维护会话上下文），选使用内存存储
+    private List<Message> messageList = new ArrayList<>();
+
+    /**
+     * 运行代理
+     *
+     * @param userPrompt 用户提示词
+     * @return 执行结果
+     */
+    public String run(String userPrompt) {
+        if (this.state != AgentState.IDLE) {
+            throw new RuntimeException("无法从当前状态运行智能体: " + this.state);
+        }
+        if (StringUtil.isBlank(userPrompt)) {
+            throw new RuntimeException("用户提示词为空，不能启动智能体执行任务");
+        }
+        // 更改状态
+        state = AgentState.RUNNING;
+        // 记录消息上下文
+        messageList.add(new UserMessage(userPrompt));
+        try {
+            // 没有超时最大步骤，并且状态并非完成状态
+            for (int i = 0 ; i < maxSteps && state != AgentState.FINISHED; i++) {
+                int stepNumber = i + 1;
+                currentStep = stepNumber;
+                log.info("执行步骤 {}/{}", stepNumber, maxSteps);
+                // 单步执行
+                String stepResult = step();
+                String result = "Step " + stepNumber + ": " + stepResult;
+                results.add(result);
+            }
+        }
+    }
+
 }
