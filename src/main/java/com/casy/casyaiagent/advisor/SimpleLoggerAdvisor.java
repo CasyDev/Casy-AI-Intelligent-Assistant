@@ -1,7 +1,6 @@
 package com.casy.casyaiagent.advisor;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClientMessageAggregator;
 import org.springframework.ai.chat.client.ChatClientRequest;
 import org.springframework.ai.chat.client.ChatClientResponse;
@@ -11,48 +10,47 @@ import org.springframework.ai.chat.client.advisor.api.StreamAdvisor;
 import org.springframework.ai.chat.client.advisor.api.StreamAdvisorChain;
 import reactor.core.publisher.Flux;
 
+@Slf4j
 public class SimpleLoggerAdvisor implements CallAdvisor, StreamAdvisor {
 
-	private static final Logger logger = LoggerFactory.getLogger(SimpleLoggerAdvisor.class);
+    @Override
+    public String getName() {
+        return this.getClass().getSimpleName();
+    }
 
-	@Override
-	public String getName() { 
-		return this.getClass().getSimpleName();
-	}
-
-	@Override
-	public int getOrder() { 
-		return 0;
-	}
+    @Override
+    public int getOrder() {
+        return 0;
+    }
 
 
-	@Override
-	public ChatClientResponse adviseCall(ChatClientRequest chatClientRequest, CallAdvisorChain callAdvisorChain) {
-		logRequest(chatClientRequest);
+    @Override
+    public ChatClientResponse adviseCall(ChatClientRequest chatClientRequest, CallAdvisorChain callAdvisorChain) {
+        logRequest(chatClientRequest);
 
-		ChatClientResponse chatClientResponse = callAdvisorChain.nextCall(chatClientRequest);
+        ChatClientResponse chatClientResponse = callAdvisorChain.nextCall(chatClientRequest);
 
-		logResponse(chatClientResponse);
+        logResponse(chatClientResponse);
 
-		return chatClientResponse;
-	}
+        return chatClientResponse;
+    }
 
-	@Override
-	public Flux<ChatClientResponse> adviseStream(ChatClientRequest chatClientRequest,
-												 StreamAdvisorChain streamAdvisorChain) {
-		logRequest(chatClientRequest);
+    @Override
+    public Flux<ChatClientResponse> adviseStream(ChatClientRequest chatClientRequest,
+                                                 StreamAdvisorChain streamAdvisorChain) {
+        logRequest(chatClientRequest);
 
-		Flux<ChatClientResponse> chatClientResponses = streamAdvisorChain.nextStream(chatClientRequest);
+        Flux<ChatClientResponse> chatClientResponses = streamAdvisorChain.nextStream(chatClientRequest);
 
-		return new ChatClientMessageAggregator().aggregateChatClientResponse(chatClientResponses, this::logResponse);
-	}
+        return new ChatClientMessageAggregator().aggregateChatClientResponse(chatClientResponses, this::logResponse);
+    }
 
-	private void logRequest(ChatClientRequest request) {
-		logger.debug("request: {}", request);
-	}
+    private void logRequest(ChatClientRequest request) {
+        log.debug("request: {}", request);
+    }
 
-	private void logResponse(ChatClientResponse chatClientResponse) {
-		logger.debug("response: {}", chatClientResponse);
-	}
+    private void logResponse(ChatClientResponse chatClientResponse) {
+        log.debug("response: {}", chatClientResponse);
+    }
 
 }

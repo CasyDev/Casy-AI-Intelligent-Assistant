@@ -1,9 +1,8 @@
 package com.casy.casyaiagent.advisor;
 
 import cn.hutool.core.util.StrUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClientRequest;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
@@ -23,9 +22,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * 完整的提示词+响应日志 Advisor (Spring AI 1.1.0 兼容版本)
  * 在 adviseCall 方法中完成请求拦截、执行和日志记录。
  */
+@Slf4j
 public class PromptLoggingAdvisor implements CallAdvisor { // 【修正1】实现 CallAdvisor 而非 BaseAdvisor
 
-    private static final Logger logger = LoggerFactory.getLogger(PromptLoggingAdvisor.class);
     private static final DateTimeFormatter DEFAULT_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     // 扩展日志模板
@@ -47,17 +46,8 @@ public class PromptLoggingAdvisor implements CallAdvisor { // 【修正1】实�
                ├─ 响应Token: {completionTokens}
                └─ 总Token: {totalTokens}
             """;
-
-    // 配置项
-    private final String logTemplate;
-    private final DateTimeFormatter dateFormatter;
-    private final boolean enableLogging;
-    private final boolean recordTokenInfo;
-    private int order = 0;
-
     // 【修正2】使用线程安全的Map来临时存储请求开始时间，解决 before/after 数据传递问题
     private static final Map<ChatClientRequest, Long> REQUEST_START_TIME_CACHE = new ConcurrentHashMap<>();
-
     // 模型别名映射（可选功能）
     private static final Map<String, String> MODEL_ALIAS_MAP = new HashMap<>();
 
@@ -66,6 +56,13 @@ public class PromptLoggingAdvisor implements CallAdvisor { // 【修正1】实�
         MODEL_ALIAS_MAP.put("qwen-turbo-2024-04-01", "千问-turbo");
         // 可根据需要添加更多映射
     }
+
+    // 配置项
+    private final String logTemplate;
+    private final DateTimeFormatter dateFormatter;
+    private final boolean enableLogging;
+    private final boolean recordTokenInfo;
+    private int order = 0;
 
     // ==================== 构造器 ====================
     public PromptLoggingAdvisor() {
@@ -106,7 +103,7 @@ public class PromptLoggingAdvisor implements CallAdvisor { // 【修正1】实�
             return response;
         } catch (Exception e) {
             // 即使调用失败也尝试记录请求信息
-            logger.error("AI调用发生异常，请求信息：{}", getOriginalPrompt(request), e);
+            log.error("AI调用发生异常，请求信息：{}", getOriginalPrompt(request), e);
             throw e; // 重新抛出异常
         } finally {
             // 清理缓存，防止内存泄漏
@@ -147,9 +144,9 @@ public class PromptLoggingAdvisor implements CallAdvisor { // 【修正1】实�
                     .build()
                     .render();
 
-            logger.info(logContent);
+            log.info(logContent);
         } catch (Exception e) {
-            logger.error("记录AI交互日志时发生异常", e);
+            log.error("记录AI交互日志时发生异常", e);
         }
     }
 

@@ -1,13 +1,12 @@
 package com.casy.casyaiagent.ai;
 
-import ch.qos.logback.classic.Logger;
 import com.casy.casyaiagent.advisor.PromptLoggingAdvisor;
 import com.casy.casyaiagent.constant.Global;
 import com.casy.casyaiagent.rag.component.BaiduTranslationQueryTransformer;
 import com.casy.casyaiagent.rag.component.LoveAppPromptTemplate;
 import com.casy.casyaiagent.rag.component.QueryRewriter;
 import com.casy.casyaiagent.rag.factory.LoveAppRagCustomAdvisorFactory;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
@@ -29,34 +28,25 @@ import org.springframework.stereotype.Component;
 /**
  * @author Administrator
  */
+@Slf4j
 @Component
 public class LoveApp {
-
-    private final ChatClient chatClient;
-
-    private final MessageChatMemoryAdvisor chatMemoryAdvisor;
-
-    private final VectorStore loveAppVectorStore;
-
-    private final VectorStore pgVectorVectorStore;
-
-    private final LoveAppPromptTemplate loveAppPromptTemplate;
-
-    // 云知识库
-    private final Advisor loveAppRagCloudAdvisor;
-
-    private ToolCallbackProvider toolCallbackProvider;
-
-    private final ToolCallback[] allTools; //工具调用类
-
-    private static final Logger log = (Logger) LoggerFactory.getLogger(LoveApp.class);
-
-//    ChatMemory chatMemory = MessageWindowChatMemory.builder().build();
 
     private static final String SYSTEM_PROMPT = "扮演深耕恋爱心理领域的专家。开场向用户表明身份，告知用户可倾诉恋爱难题。" +
             "围绕单身、恋爱、已婚三种状态提问：单身状态询问社交圈拓展及追求心仪对象的困扰；" +
             "恋爱状态询问沟通、习惯差异引发的矛盾；已婚状态询问家庭责任与亲属关系处理的问题。" +
             "引导用户详述事情经过、对方反应及自身想法，以便给出专属解决方案。";
+    private final ChatClient chatClient;
+    private final MessageChatMemoryAdvisor chatMemoryAdvisor;
+    private final VectorStore loveAppVectorStore;
+    private final VectorStore pgVectorVectorStore;
+    private final LoveAppPromptTemplate loveAppPromptTemplate;
+    // 云知识库
+    private final Advisor loveAppRagCloudAdvisor;
+    private final ToolCallback[] allTools; //工具调用类
+
+//    ChatMemory chatMemory = MessageWindowChatMemory.builder().build();
+    private ToolCallbackProvider toolCallbackProvider;
 
     public LoveApp(ChatModel dashscopChatModel, MessageChatMemoryAdvisor chatMemoryAdvisor,
                    VectorStore loveAppVectorStore, VectorStore pgVectorVectorStore,

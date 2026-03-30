@@ -1,7 +1,6 @@
 package com.casy.casyaiagent.constant;
 
-import ch.qos.logback.classic.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.BeanNotOfRequiredTypeException;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -14,21 +13,20 @@ import java.util.Objects;
  * @description: 全局变量
  * @date 2026/3/7 16:16
  */
+@Slf4j
 public class Global {
 
-    private static final Logger log = (Logger) LoggerFactory.getLogger(Global.class);
-
     private static ConfigurableApplicationContext springContext;
+
+    public static ConfigurableApplicationContext getSpringContext() {
+//        return Optional.ofNullable(springContext).orElseThrow(() -> new IllegalArgumentException("获取Spring上下文异常！"));
+        return Objects.requireNonNull(springContext, "获取Spring上下文异常！");
+    }
 
     public static void setSpringContext(ConfigurableApplicationContext springContext) {
         if (Objects.isNull(Global.springContext)) {
             Global.springContext = springContext;
         }
-    }
-
-    public static ConfigurableApplicationContext getSpringContext() {
-//        return Optional.ofNullable(springContext).orElseThrow(() -> new IllegalArgumentException("获取Spring上下文异常！"));
-        return Objects.requireNonNull(springContext, "获取Spring上下文异常！");
     }
 
     // 返回上下文中的Bean对象

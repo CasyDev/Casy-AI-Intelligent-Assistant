@@ -1,11 +1,8 @@
 package com.casy.casyaiagent.util;
 
-import ch.qos.logback.classic.Logger;
-import com.casy.casyaiagent.ai.LoveApp;
 import com.casy.casyaiagent.constant.Global;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 
@@ -18,11 +15,8 @@ import org.springframework.context.ConfigurableApplicationContext;
  * 这个将其赋值给全局的springContext变量来简化组件的注入
  * @date 2026/3/7 16:19
  */
-//@Slf4j
+@Slf4j
 public class GlobalSpringContextInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
-
-    //TODO IDEA@Slf4报错找不到，可能是IDEA有问题，之后升级idea在改
-    private static final Logger log = (Logger) LoggerFactory.getLogger(GlobalSpringContextInitializer.class);
 
     @Override
     public void initialize(@NotNull ConfigurableApplicationContext applicationContext) {

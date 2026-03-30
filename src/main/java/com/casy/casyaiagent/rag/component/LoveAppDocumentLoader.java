@@ -1,7 +1,6 @@
 package com.casy.casyaiagent.rag.component;
 
-import ch.qos.logback.classic.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.markdown.MarkdownDocumentReader;
 import org.springframework.ai.reader.markdown.config.MarkdownDocumentReaderConfig;
@@ -18,10 +17,9 @@ import java.util.List;
  * @description: markdown文档加载器
  * @date 2026/1/19 20:46
  */
+@Slf4j
 @Component
 public class LoveAppDocumentLoader {
-
-    private static final Logger log = (Logger) LoggerFactory.getLogger(LoveAppDocumentLoader.class);
 
     private final ResourcePatternResolver resourcePatternResolver;
 

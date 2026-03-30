@@ -3,8 +3,7 @@ package com.casy.casyaiagent.tool;
 import jakarta.annotation.Resource;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,9 +18,8 @@ import java.time.format.DateTimeFormatter;
  * Offer邮件发送工具
  */
 @Component
+@Slf4j
 public class OfferMailTool {
-
-    private static final Logger log = LoggerFactory.getLogger(OfferMailTool.class);
 
     @Resource
     private JavaMailSender mailSender;
@@ -70,9 +68,9 @@ public class OfferMailTool {
      * 构建Offer邮件HTML内容
      */
     private String buildOfferHtml(String candidateName, String position, String department,
-                                   String entryDate, String annualSalary, String workLocation) {
+                                  String entryDate, String annualSalary, String workLocation) {
         String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
-        
+
         return "<!DOCTYPE html>\n" +
                 "<html lang=\"zh-CN\">\n" +
                 "<head>\n" +

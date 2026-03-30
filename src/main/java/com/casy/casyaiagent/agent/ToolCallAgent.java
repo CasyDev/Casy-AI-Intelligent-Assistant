@@ -8,8 +8,6 @@ import jakarta.annotation.Resource;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
@@ -33,11 +31,8 @@ import java.util.stream.Collectors;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-//@Slf4j
+@Slf4j
 public class ToolCallAgent extends ReActAgent {
-
-    // TODO idea升级后修改
-    private static final Logger log = LoggerFactory.getLogger(ReActAgent.class);
 
     // 可用的工具
     private final ToolCallback[] availableTools;
@@ -82,9 +77,9 @@ public class ToolCallAgent extends ReActAgent {
             // 输出提示信息
             String result = assistantMessage.getText();
             List<AssistantMessage.ToolCall> toolCallList = assistantMessage.getToolCalls();
-            log.info(getName() + "的思考: " + result);
-            log.info(getName() + "选择了 " + toolCallList.size() + " 个工具来使用");
-            log.info(getName() + "选择了使用： " + toolCallList);
+            log.info("{}的思考: {}", getName(), result);
+            log.info("{}选择了 {} 个工具来使用", getName(), toolCallList.size());
+            log.info("{}选择了使用： {}", getName(), toolCallList);
             log.info(toolCallList.stream().map(toolCall -> String.format("工具名称：%s，参数：%s", toolCall.name(), toolCall.arguments())).collect(Collectors.joining("\n")));
             if (toolCallList.isEmpty()) {
                 // 只有不调用工具时，才记录助手消息
