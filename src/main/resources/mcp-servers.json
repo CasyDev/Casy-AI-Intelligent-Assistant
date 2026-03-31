@@ -9,17 +9,17 @@
         "@amap/amap-maps-mcp-server"
       ],
       "env": {
-        "AMAP_MAPS_API_KEY": "你的key"
+        "AMAP_MAPS_API_KEY": "你的key，记得要填呀"
       }
     },
     "yu-image-search-mcp-server": {
-      "command": "C:/Users/landu/.jdks/ms-21.0.8/bin/java.exe",
+      "command": "D:/etc/java/OpenJDK21.0.10/bin/java.exe",
       "args": [
         "-Dspring.ai.mcp.server.stdio=true",
         "-Dspring.main.web-application-type=none",
         "-Dlogging.pattern.console=",
         "-jar",
-        "D:/project/ideaProject/casy-ai-agent/casy-image-search-mcp-server/target/casy-image-search-mcp-server-0.0.1-SNAPSHOT.jar"
+        "D:/myProject/casy-ai-agent/casy-image-search-mcp-server/target/casy-image-search-mcp-server-0.0.1-SNAPSHOT.jar"
       ],
       "env": {
         "myParam": "basice/comkdfha/chineses/aade.png"

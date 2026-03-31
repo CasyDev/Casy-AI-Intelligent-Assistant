@@ -19,6 +19,7 @@ import org.springframework.ai.model.tool.DefaultToolCallingManager;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.execution.ToolExecutionExceptionProcessor;
 
 import java.util.List;
@@ -42,10 +43,8 @@ public class ToolCallAgent extends ReActAgent {
     private final ChatOptions chatOptions;
     // 保存了工具调用信息的响应
     private ChatResponse toolCallChatResponse;
-    @Resource
-    private ToolExecutionExceptionProcessor toolExecutionExceptionProcessor;
 
-    public ToolCallAgent(ToolCallback[] availableTools) {
+    public ToolCallAgent(ToolCallback[] availableTools, ToolExecutionExceptionProcessor toolExecutionExceptionProcessor) {
         super();
         this.availableTools = availableTools;
         this.toolCallingManager = DefaultToolCallingManager.builder().toolExecutionExceptionProcessor(toolExecutionExceptionProcessor).build();

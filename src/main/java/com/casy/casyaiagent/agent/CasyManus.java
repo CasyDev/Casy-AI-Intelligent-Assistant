@@ -4,6 +4,8 @@ import com.casy.casyaiagent.advisor.PromptLoggingAdvisor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.ai.tool.execution.ToolExecutionExceptionProcessor;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,8 +18,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class CasyManus extends ToolCallAgent {
 
-    public CasyManus(ToolCallback[] availableTools, ChatModel dashscopeChatModel) {
-        super(availableTools);
+    public CasyManus(ToolCallback[] availableTools, ChatModel dashscopeChatModel, ToolExecutionExceptionProcessor toolExecutionExceptionProcessor,  ToolCallbackProvider toolCallbackProvider) {
+        super(availableTools, toolExecutionExceptionProcessor);
         this.setName("casyManus");
         final String SYSTEM_PROMPT = """
                  You are CasyManus, an all-capable AI assistant, aimed at solving any task presented by the user. \s
@@ -34,10 +36,11 @@ public class CasyManus extends ToolCallAgent {
                 If you want to stop the interaction at any point, use the `terminate` tool/function call.
                 """;
         this.setNextStepPrompt(NEXT_STEP_PROMPT);
-        this.setMaxSteps(20);
+        this.setMaxSteps(5);
         // 初始化客户端
         ChatClient chatClient = ChatClient.builder(dashscopeChatModel)
                 .defaultAdvisors(new PromptLoggingAdvisor())
+                .defaultToolCallbacks(toolCallbackProvider) // MCP
                 .build();
         this.setChatClient(chatClient);
     }

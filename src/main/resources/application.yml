@@ -51,6 +51,25 @@ spring:
 #              env:
 #                API_KEY: your-api-key
 
+  # 邮件配置（QQ邮箱）
+#  mail:
+#    host: smtp.qq.com
+#    port: 587
+#    username: aaaa@qq.com          # 替换为你的QQ邮箱
+#    password: bjvrgouzeymociej  # 替换为QQ邮箱授权码（不是登录密码）
+#    protocol: smtp
+#    default-encoding: UTF-8
+#    properties:
+#      mail:
+#        smtp:
+#          auth: true
+#          starttls:
+#            enable: true
+#          ssl:
+#            enable: true
+#          socketFactory:
+#            class: javax.net.ssl.SSLSocketFactory
+
 server:
   port: 8123
   servlet:
