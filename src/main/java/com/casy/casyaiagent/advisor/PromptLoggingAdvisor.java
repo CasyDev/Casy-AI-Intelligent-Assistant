@@ -7,9 +7,11 @@ import org.springframework.ai.chat.client.ChatClientRequest;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.metadata.ChatResponseMetadata;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.lang.NonNull;
 
 import java.time.LocalDateTime;
@@ -40,7 +42,8 @@ public class PromptLoggingAdvisor implements CallAdvisor { // 【修正1】实�
             ├─ 响应信息
             │  ├─ 响应内容: {responseContent}
             │  ├─ 响应长度: {responseLength} 字符
-            │  └─ 响应状态: {responseStatus}
+            │  ├─ 响应状态: {responseStatus}
+            │  └─ 工具调用: {toolCalls}
             └─ Token 消耗（如有）
                ├─ 提示词Token: {promptTokens}
                ├─ 响应Token: {completionTokens}
@@ -133,6 +136,7 @@ public class PromptLoggingAdvisor implements CallAdvisor { // 【修正1】实�
             logVariables.put("responseContent", responseContent);
             logVariables.put("responseLength", String.valueOf(responseLength)); // int -> String
             logVariables.put("responseStatus", responseStatus);
+            logVariables.put("toolCalls", getToolCallsInfo(response));
             // 确保tokenInfo的值也是String，这里getOrDefault本身返回Object，需转换
             logVariables.put("promptTokens", tokenInfo.getOrDefault("promptTokens", "未统计").toString());
             logVariables.put("completionTokens", tokenInfo.getOrDefault("completionTokens", "未统计").toString());
@@ -192,9 +196,38 @@ public class PromptLoggingAdvisor implements CallAdvisor { // 【修正1】实�
      */
     private String getResponseContent(ChatClientResponse response) {
         try {
-            return response.chatResponse().getResult().getOutput().getText();
+            String text = response.chatResponse().getResult().getOutput().getText();
+            // 如果有工具调用，文本可能为空，这是正常的
+            return text != null ? text : "";
         } catch (Exception e) {
             return "[无法提取响应内容]";
+        }
+    }
+
+    /**
+     * 获取工具调用信息
+     */
+    private String getToolCallsInfo(ChatClientResponse response) {
+        try {
+            AssistantMessage assistantMessage = response.chatResponse().getResult().getOutput();
+            if (assistantMessage.getToolCalls() == null || assistantMessage.getToolCalls().isEmpty()) {
+                return "无";
+            }
+            
+            StringBuilder toolCallsInfo = new StringBuilder();
+            toolCallsInfo.append("\n");
+            
+            for (AssistantMessage.ToolCall toolCall : assistantMessage.getToolCalls()) {
+                toolCallsInfo.append(String.format(
+                    "            │     ├─ 工具: %s\n            │     └─ 参数: %s\n",
+                    toolCall.name(),
+                    toolCall.arguments()
+                ));
+            }
+            
+            return toolCallsInfo.toString().trim();
+        } catch (Exception e) {
+            return "[无法提取工具调用信息]";
         }
     }
 

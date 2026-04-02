@@ -11,7 +11,7 @@ public class PDFGenerationToolTest {
         PDFGenerationTool tool = new PDFGenerationTool();
         String fileName = "测试PDF生成.pdf";
         String content = "测试PDF生成内容";
-        String result = tool.generatePDF(fileName, content);
+        String result = tool.generatePDF(fileName, content, false);
         assertNotNull(result);
     }
 }

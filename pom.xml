@@ -188,7 +188,12 @@
             <groupId>com.itextpdf</groupId>
             <artifactId>font-asian</artifactId>
             <version>9.1.0</version>
-            <scope>test</scope>
+        </dependency>
+        <!-- iText HTML to PDF -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>html2pdf</artifactId>
+            <version>6.1.0</version>
         </dependency>
 
         <!-- 解决添加工具调用之后报错缺少com/github/victools/jsonschema/generator/AnnotationHelper -->
