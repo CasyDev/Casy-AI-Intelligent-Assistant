@@ -11,7 +11,8 @@ public class TerminateTool {
 
     @Tool(description = """  
             Terminate the interaction when the request is met OR if the assistant cannot proceed further with the task.  
-            "When you have finished all the tasks, call this tool to end the work.  
+            When you have finished all the tasks, call this tool to end the work.
+            After calling this tool, the system will automatically generate a final summary for the user.
             """)
     public String doTerminate() {
         return "任务结束";

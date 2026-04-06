@@ -8,10 +8,12 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.List;
-
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 抽象基础代理类，用于管理代理状态和执行流程。
@@ -65,26 +67,26 @@ public abstract class BaseAgent {
         state = AgentState.RUNNING;
         // 记录消息上下文
         messageList.add(new UserMessage(userPrompt));
-        
+
         // 保存消息结果
         List<String> results = new ArrayList<>();
-        
+
         try {
             // ========== 第一步：生成整体执行计划 ==========
             log.info("╔══════════════════════════════════════════════════════════════╗");
             log.info("║  [{}] 开始分析任务并制定执行计划", getName());
             log.info("╚══════════════════════════════════════════════════════════════╝");
-            
+
             String initialPlan = generateInitialPlan(userPrompt);
             if (initialPlan != null && !initialPlan.isEmpty()) {
                 log.info("📋 整体执行计划:\n{}", initialPlan);
                 results.add("【执行计划】\n" + initialPlan);
             }
-            
+
             log.info("╔══════════════════════════════════════════════════════════════╗");
             log.info("║  [{}] 开始执行具体步骤", getName());
             log.info("╚══════════════════════════════════════════════════════════════╝");
-            
+
             // ========== 第二步：执行具体步骤 ==========
             for (int i = 0; i < maxSteps && state != AgentState.FINISHED; i++) {
                 int stepNumber = i + 1;
@@ -114,7 +116,113 @@ public abstract class BaseAgent {
             cleanup();
         }
     }
-    
+
+    /**
+     * 运行代理（流式输出）
+     * 整体流程
+     * 步骤1: AI思考 → 调用 工具1 → 执行搜索
+     * 步骤2: AI思考 → 调用 工具2 → 执行详情获取
+     * 步骤3: AI思考 → 调用 doTerminate工具 → 设置 needFinalSummary=true ✅
+     * 步骤4: 检测到 needFinalSummary → AI生成最终总结 → 设置 FINISHED ✅
+     * 任务结束
+     *
+     * @param userPrompt 用户提示词
+     * @return SseEmitter 实例
+     */
+    public SseEmitter runStream(String userPrompt) {
+        // 创建SseEmitter，设置较长的超时时间
+        SseEmitter sseEmitter = new SseEmitter(300000L); // 5分钟超时
+        // 使用线程异步处理,避免阻塞主线程
+        CompletableFuture.runAsync(() -> {
+            try {
+                // ✅ 添加超时回调
+                sseEmitter.onTimeout(() -> {
+                    this.state = AgentState.ERROR;
+                    this.cleanup();
+                    log.warn("SSE 连接超时");
+                    try {
+                        sseEmitter.send("会话连接超时: " + this.state);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    sseEmitter.complete();
+                });
+                // ✅ 添加连接断开回调
+                sseEmitter.onCompletion(() -> {
+                    if (this.state == AgentState.RUNNING) {
+                        this.state = AgentState.FINISHED;
+                    }
+                    this.cleanup();
+                    log.info("SSE 连接关闭");
+                });
+
+                if (this.state != AgentState.IDLE) {
+                    sseEmitter.send("错误：无法从状态运行代理: " + this.state);
+                    sseEmitter.complete();
+                    return;
+                }
+                if (StringUtil.isBlank(userPrompt)) {
+                    sseEmitter.send("错误：不能使用空提示词运行代理");
+                    sseEmitter.complete();
+                }
+                // 更改状态
+                state = AgentState.RUNNING;
+                // 记录消息上下文
+                messageList.add(new UserMessage(userPrompt));
+                try {
+                    // ========== 第一步：生成整体执行计划 ==========
+                    log.info("[{}] 开始分析任务并制定执行计划", getName());
+
+                    String initialPlan = generateInitialPlan(userPrompt);
+                    if (initialPlan != null && !initialPlan.isEmpty()) {
+                        log.info("📋 整体执行计划:\n{}", initialPlan);
+                        sseEmitter.send("【执行计划】\n" + initialPlan);
+                    }
+                    log.info("[{}] 开始执行具体步骤", getName());
+                    // ========== 第二步：执行具体步骤 ==========
+                    for (int i = 0; i < maxSteps && state != AgentState.FINISHED; i++) {
+                        int stepNumber = i + 1;
+                        currentStep = stepNumber;
+                        log.info("执行步骤 {}/{}", stepNumber, maxSteps);
+                        sseEmitter.send("执行步骤 " + stepNumber + "/" + maxSteps);
+
+                        // 单步执行
+                        String stepResult = step();
+                        // 每一步 step 执行完都要检查是否陷入循环
+                        if (isStuck()) {
+                            handleStuckState();
+                        }
+                        String result = "Step " + stepNumber + ": " + stepResult;
+                        // 发送每一步的结果
+                        sseEmitter.send(result);
+                    }
+                    // 检查是否超出步骤限制
+                    if (currentStep >= maxSteps) {
+                        state = AgentState.FINISHED;
+                        sseEmitter.send("执行结束: 达到最大步骤 (" + maxSteps + ")");
+                    }
+                    // 正常完成
+                    sseEmitter.complete();
+                } catch (Exception e) {
+                    state = AgentState.ERROR;
+                    log.error("执行智能体失败", e);
+                    try {
+                        sseEmitter.send("执行错误: " + e.getMessage());
+                        sseEmitter.complete();
+                    } catch (Exception ex) {
+                        sseEmitter.completeWithError(ex);
+                    }
+                } finally {
+                    // 清理资源
+                    cleanup();
+                }
+            } catch (Exception e) {
+                sseEmitter.completeWithError(e);
+            }
+        });
+        return sseEmitter;
+    }
+
     /**
      * 生成初始执行计划
      * <p>
@@ -131,7 +239,7 @@ public abstract class BaseAgent {
      * @return 步骤执行结果
      */
     public abstract String step();
-    
+
 
     /**
      * 清理资源
@@ -144,7 +252,7 @@ public abstract class BaseAgent {
      * 处理陷入循环的状态
      */
     protected void handleStuckState() {
-        String stuckPrompt = "观察到重复响应。考虑新策略，避免重复已尝试过的无效路径，若新策略无较应先通告用户原因，之后立即结束，";
+        String stuckPrompt = "观察到重复响应。考虑新策略，避免重复已尝试过的无效路径，若新策略无效应先通告用户原因，之后立即结束";
         this.nextStepPrompt = stuckPrompt + "\n" + (this.nextStepPrompt != null ? this.nextStepPrompt : "");
         System.out.println("Agent detected stuck state. Added prompt: " + stuckPrompt);
     }
@@ -187,8 +295,7 @@ public abstract class BaseAgent {
         // 计算相同内容的助手消息出现次数
         int duplicateCount = 0;
         for (Message msg : messages) {
-            if (msg instanceof AssistantMessage) {
-                AssistantMessage assistantMsg = (AssistantMessage) msg;
+            if (msg instanceof AssistantMessage assistantMsg) {
                 String content = assistantMsg.getText();
                 if (content != null && content.equals(lastContent)) {
                     duplicateCount++;

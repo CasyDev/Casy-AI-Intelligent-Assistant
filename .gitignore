@@ -33,6 +33,7 @@ build/
 .vscode/
 
 ### 忽略本地配置 ###
+src/main/resources/application-local.yml.back
 src/main/resources/application-local.yml
 
 ### 忽略特定的类 ###

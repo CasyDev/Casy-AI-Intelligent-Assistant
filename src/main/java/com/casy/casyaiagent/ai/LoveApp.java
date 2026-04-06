@@ -24,6 +24,7 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
 
 /**
  * @author Administrator
@@ -45,7 +46,7 @@ public class LoveApp {
     private final Advisor loveAppRagCloudAdvisor;
     private final ToolCallback[] allTools; //工具调用类
 
-//    ChatMemory chatMemory = MessageWindowChatMemory.builder().build();
+
     private ToolCallbackProvider toolCallbackProvider;
 
     public LoveApp(ChatModel dashscopChatModel, MessageChatMemoryAdvisor chatMemoryAdvisor,
@@ -216,5 +217,11 @@ public class LoveApp {
         String content = response.getResult().getOutput().getText();
         log.info("content: {}", content);
         return content;
+    }
+
+    //通过 stream 方法就可以返回 Flux 响应式对象
+    public Flux<String> doChatByStream(String message, String chatId) {
+        return chatClient.prompt().user(message).advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatId)).stream().content();
+
     }
 }

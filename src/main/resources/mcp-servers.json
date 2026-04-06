@@ -13,13 +13,13 @@
       }
     },
     "yu-image-search-mcp-server": {
-      "command": "D:/etc/java/OpenJDK21.0.10/bin/java.exe",
+      "command": "java",
       "args": [
         "-Dspring.ai.mcp.server.stdio=true",
         "-Dspring.main.web-application-type=none",
         "-Dlogging.pattern.console=",
         "-jar",
-        "D:/myProject/casy-ai-agent/casy-image-search-mcp-server/target/casy-image-search-mcp-server-0.0.1-SNAPSHOT.jar"
+        "casy-image-search-mcp-server/target/casy-image-search-mcp-server-0.0.1-SNAPSHOT.jar"
       ],
       "env": {
         "myParam": "basice/comkdfha/chineses/aade.png"

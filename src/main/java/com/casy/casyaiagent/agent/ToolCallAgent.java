@@ -43,6 +43,8 @@ public class ToolCallAgent extends ReActAgent {
     private final ChatOptions chatOptions;
     // 保存了工具调用信息的响应
     private ChatResponse toolCallChatResponse;
+    // 标记是否需要生成最终总结（调用终止工具后需要再生成一次总结回复）
+    private boolean needFinalSummary = false;
 
     public ToolCallAgent(ToolCallback[] availableTools, ToolExecutionExceptionProcessor toolExecutionExceptionProcessor) {
         super();
@@ -51,6 +53,23 @@ public class ToolCallAgent extends ReActAgent {
         // 禁用 Spring AI 内置的工具调用机制，自己维护选项和消息上下文
         this.chatOptions = DashScopeChatOptions.builder().toolCallbacks(List.of(this.availableTools)).internalToolExecutionEnabled(false)  // 禁用内部工具执行
                 .build();
+    }
+
+    /**
+     * 检测 AI 回复是否包含结束任务的意图
+     * 用于处理 AI 口头上说"调用工具：terminate"但实际上没有生成工具调用的情况
+     * 
+     * @param result AI 的思考结果文本
+     * @return 是否包含结束意图
+     */
+    private boolean isTerminateIntention(String result) {
+        if (result == null || result.isEmpty()) {
+            return false;
+        }
+        String lowerResult = result.toLowerCase();
+        // 检测常见的结束任务表达
+        return (lowerResult.contains("terminate") ||
+                lowerResult.contains("结束任务"));
     }
 
     /**
@@ -65,7 +84,7 @@ public class ToolCallAgent extends ReActAgent {
                 
                 计划应包含以下内容：
                 1. 任务目标：简要说明任务的核心目标
-                2. 执行步骤：列出完成此任务需要的主要步骤（3-8步）
+                2. 执行步骤：列出完成此任务需要的主要步骤
                 3. 所需工具：列出可能需要使用的工具
                 4. 预期成果：说明任务完成后的输出
                 
@@ -107,6 +126,31 @@ public class ToolCallAgent extends ReActAgent {
         log.info("║  [{}] 开始第 {} 步思考", getName(), getCurrentStep());
         log.info("╚══════════════════════════════════════════════════════════════╝");
         
+        // 【特殊处理】如果上一步调用了终止工具，现在生成最终总结
+        if (needFinalSummary) {
+            log.info("📝 生成任务最终总结...");
+            
+            // 添加系统消息提示 AI 生成最终总结
+            getMessageList().add(new SystemMessage("""
+                任务已完成。请根据以上所有信息，生成一个清晰、完整的最终回复给用户。
+                总结任务执行结果，提供有用的信息或建议。直接输出回复内容，不需要调用任何工具。
+                """));
+            
+            // 让 AI 生成最终回复（不启用工具调用）
+            Prompt finalPrompt = new Prompt(getMessageList(), chatOptions);
+            ChatResponse finalResponse = getChatClient().prompt(finalPrompt).system(getSystemPrompt()).call().chatResponse();
+            AssistantMessage finalMessage = finalResponse.getResult().getOutput();
+            
+            // 记录最终回复
+            getMessageList().add(finalMessage);
+            log.info("✅ 最终回复: {}", finalMessage.getText());
+            
+            // 真正结束任务
+            setState(AgentState.FINISHED);
+            needFinalSummary = false;
+            return false;
+        }
+        
         if (getNextStepPrompt() != null && !getNextStepPrompt().isEmpty()) {
             UserMessage userMessage = new UserMessage(getNextStepPrompt());
             getMessageList().add(userMessage);
@@ -129,11 +173,22 @@ public class ToolCallAgent extends ReActAgent {
             String result = assistantMessage.getText();
             List<AssistantMessage.ToolCall> toolCallList = assistantMessage.getToolCalls();
             
+            // 【关键修复】始终将 AI 的思考结果添加到消息历史，无论是否调用工具
+            // 这样才能确保客户端能收到 AI 的回复内容
+            getMessageList().add(assistantMessage);
+            
             if (toolCallList.isEmpty()) {
-                // 只有不调用工具时，才记录助手消息
+                // 不调用工具时
                 log.info("💭 AI 思考结果: {}", result);
+                
+                // 【兜底机制】检测 AI 表示要结束任务但实际上没有调用 terminate 工具的情况
+                if (isTerminateIntention(result)) {
+                    log.warn("⚠️ AI 表示要结束任务但未实际调用 terminate 工具，将生成最终总结后结束");
+                    needFinalSummary = true;  // 设置标记，让下一步生成最终总结
+                    return false;
+                }
+                
                 log.info("✅ 任务完成，无需调用工具");
-                getMessageList().add(assistantMessage);
                 return false;
             } else {
                 // 需要调用工具时，记录 AI 的决策过程
@@ -209,10 +264,11 @@ public class ToolCallAgent extends ReActAgent {
             .map(res -> "工具 " + res.name() + " 执行完成，结果: " + res.responseData())
             .collect(Collectors.joining("\n"));
         
-        // 当调用了终止工具时，修改 agent 的状态为 "已结束"，防止无意义执行
+        // 当调用了终止工具时，设置标记让下一步生成最终总结
         if (toolResponseMessage.getResponses().stream().anyMatch(res -> StrUtil.equals("doTerminate", res.name()))) {
-            log.info("🏁 检测到终止工具调用，任务结束");
-            setState(AgentState.FINISHED);
+            log.info("🏁 检测到终止工具调用，下一步将生成最终总结");
+            needFinalSummary = true;
+            return "任务结束，准备生成最终总结";
         }
         
         log.info("✅ 工具调用执行完成");

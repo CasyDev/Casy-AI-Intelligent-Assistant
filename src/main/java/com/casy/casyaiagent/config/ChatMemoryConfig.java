@@ -3,31 +3,31 @@ package com.casy.casyaiagent.config;
 import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepository;
 import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepositoryDialect;
 import org.springframework.ai.chat.memory.repository.jdbc.MysqlChatMemoryRepositoryDialect;
-import org.springframework.ai.chat.memory.repository.jdbc.PostgresChatMemoryRepositoryDialect;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * @author Administrator
+ * JDBC 对话记忆配置类
+ * 仅在 loveapp.chat.memory.type=jdbc 时生效
  */
 @Configuration
+@ConditionalOnProperty(name = "loveapp.chat.memory.type", havingValue = "jdbc")
 public class ChatMemoryConfig {
+
     @Bean
-    public JdbcChatMemoryRepositoryDialect customDialect() {
-        // 将 "my_custom_chat_memory" 替换为您想要的表名
-        //return new CustomMysqlChatMemoryDialect("my_custom_chat_memory");
+    public JdbcChatMemoryRepositoryDialect jdbcChatMemoryRepositoryDialect() {
+        // 根据需要可以切换为 PostgreSQL 或其他数据库方言
         return new MysqlChatMemoryRepositoryDialect();
-//        return new PostgresChatMemoryRepositoryDialect();
-//        return new MyPostgresChatMemoryRepositoryDialect();
     }
 
     @Bean
     public JdbcChatMemoryRepository chatMemoryRepository(JdbcTemplate jdbcTemplate,
-                                                         JdbcChatMemoryRepositoryDialect customDialect) {
+                                                         JdbcChatMemoryRepositoryDialect jdbcChatMemoryRepositoryDialect) {
         return JdbcChatMemoryRepository.builder()
                 .jdbcTemplate(jdbcTemplate)
-                .dialect(customDialect) // 注入自定义的Dialect
+                .dialect(jdbcChatMemoryRepositoryDialect)
                 .build();
     }
 }

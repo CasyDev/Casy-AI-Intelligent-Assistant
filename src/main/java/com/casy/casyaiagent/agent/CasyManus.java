@@ -5,6 +5,8 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.execution.ToolExecutionExceptionProcessor;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,13 +17,14 @@ import org.springframework.stereotype.Component;
  * @author linlin
  */
 @Component
+@Scope(value = BeanDefinition.SCOPE_PROTOTYPE)
 public class CasyManus extends ToolCallAgent {
 
     public CasyManus(ToolCallback[] availableTools, ChatModel dashscopeChatModel, ToolExecutionExceptionProcessor toolExecutionExceptionProcessor,  ToolCallbackProvider toolCallbackProvider) {
         super(availableTools, toolExecutionExceptionProcessor);
         this.setName("casyManus");
         
-        int maxSteps = 10;
+        int maxSteps = 20;
         int planSteps = maxSteps / 3;
         int checkInterval = maxSteps / 2;
         
@@ -43,6 +46,8 @@ public class CasyManus extends ToolCallAgent {
                 - 遇到问题及时调整策略，不要陷入无限循环
                 - 步骤快用完时（剩余3步以内），必须优先完成任务或调用 terminate 结束
                 - 可随时调用 terminate 工具结束任务
+                
+                【关键提醒】当你决定结束任务时，必须**实际调用** doTerminate 工具，而不仅仅是口头说"调用工具：terminate"。只有实际调用工具才能真正结束任务！
                 """, maxSteps, planSteps, maxSteps, checkInterval);
         this.setSystemPrompt(systemPrompt);
         
