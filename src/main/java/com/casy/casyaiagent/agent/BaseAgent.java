@@ -184,7 +184,7 @@ public abstract class BaseAgent {
                     }
                     log.info("[{}] 开始执行具体步骤", getName());
                     // ========== 第二步：执行具体步骤 ==========
-                    for (int i = 0; i < maxSteps && state != AgentState.FINISHED; i++) {
+                    for (int i = 0; i < maxSteps && state != AgentState.FINISHED && state != AgentState.ERROR; i++) {
                         int stepNumber = i + 1;
                         currentStep = stepNumber;
                         log.info("执行步骤 {}/{}", stepNumber, maxSteps);
@@ -200,10 +200,14 @@ public abstract class BaseAgent {
                         // 发送每一步的结果
                         sseEmitter.send(result);
                     }
-                    // 检查是否超出步骤限制
+                    // 检查是否超出步骤限制或错误状态
                     if (currentStep >= maxSteps) {
                         state = AgentState.FINISHED;
                         sseEmitter.send("执行结束: 达到最大步骤 (" + maxSteps + ")");
+                    }
+                    if (state != AgentState.ERROR) {
+                        state = AgentState.FINISHED;
+                        sseEmitter.send("执行结束: 智能体异常请稍后再试！");
                     }
                     // 正常完成
                     sseEmitter.complete();

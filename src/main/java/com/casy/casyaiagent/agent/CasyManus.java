@@ -24,7 +24,7 @@ public class CasyManus extends ToolCallAgent {
         super(availableTools, toolExecutionExceptionProcessor);
         this.setName("casyManus");
         
-        int maxSteps = 20;
+        int maxSteps = 10;
         int planSteps = maxSteps / 3;
         int checkInterval = maxSteps / 2;
         

@@ -164,7 +164,8 @@ public class ToolCallAgent extends ReActAgent {
                 """));
             
             // 让 AI 生成最终回复（不启用工具调用）
-            Prompt finalPrompt = new Prompt(getMessageList(), chatOptions);
+            // 使用空的 chatOptions，不传递工具，避免 AI 再次调用工具
+            Prompt finalPrompt = new Prompt(getMessageList());
             ChatResponse finalResponse = getChatClient().prompt(finalPrompt).system(getSystemPrompt()).call().chatResponse();
             AssistantMessage finalMessage = finalResponse.getResult().getOutput();
             
@@ -200,10 +201,10 @@ public class ToolCallAgent extends ReActAgent {
             String result = assistantMessage.getText();
             List<AssistantMessage.ToolCall> toolCallList = assistantMessage.getToolCalls();
             
-            // 【关键修复】始终将 AI 的思考结果添加到消息历史，无论是否调用工具
-            // 这样才能确保客户端能收到 AI 的回复内容
-            getMessageList().add(assistantMessage);
-            
+            //  这里错了，如果有工具调用的话，不应该加 assistantMessage，而是让 act() 中的 executeToolCalls() 自动处理完整的消息序列（包括添加 assistantMessage 和 toolResponseMessage）
+            //  否则只有tool_calls 后面没有对应的 tool 响应，会报错400
+//          //  getMessageList().add(assistantMessage);
+
             if (toolCallList.isEmpty()) {
                 // 不调用工具时
                 log.info("💭 AI 思考结果: {}", result);
@@ -228,6 +229,8 @@ public class ToolCallAgent extends ReActAgent {
                 }
                 
                 log.info("✅ 任务完成，无需调用工具");
+                // 不调用工具时，直接添加 AI 的回复到消息历史
+                getMessageList().add(assistantMessage);
                 return false;
             } else {
                 // 需要调用工具时，记录 AI 的决策过程
@@ -243,7 +246,7 @@ public class ToolCallAgent extends ReActAgent {
                     // 解析参数并记录更友好的信息
                     try {
                         String args = toolCall.arguments();
-                        if (args != null && !args.isEmpty()) {
+                        if (!args.isEmpty()) {
                             log.info("  │   意图: AI 准备使用 {} 工具执行操作", toolCall.name());
                         }
                     } catch (Exception e) {
@@ -279,8 +282,9 @@ public class ToolCallAgent extends ReActAgent {
              *
              * 要使用，system 消息不会干扰 tool_calls 的执行流程
              *
+             *
              */
-            log.error(getName() + "的思考过程遇到了问题: " + e.getMessage(), e);
+            log.error("{}的思考过程遇到了问题: {}", getName(), e.getMessage(), e);
             // 【修复】使用 SystemMessage 而非 AssistantMessage，避免破坏 tool_calls 消息顺序
             getMessageList().add(new SystemMessage("系统提示：AI 处理时遇到错误: " + e.getMessage() + "。请重试或调整策略。"));
             // 增加连续异常计数
@@ -304,9 +308,6 @@ public class ToolCallAgent extends ReActAgent {
             log.warn("⚠️ 没有需要调用的工具");
             return "没有工具调用";
         }
-        
-        // 重置连续异常计数，因为即将执行工具
-        resetConsecutiveErrorCount();
         
         try {
             // 调用工具
@@ -343,6 +344,9 @@ public class ToolCallAgent extends ReActAgent {
                 needFinalSummary = true;
                 return "任务结束，准备生成最终总结";
             }
+            
+            // 【关键】重置连续异常计数，工具调用成功
+            resetConsecutiveErrorCount();
             
             log.info("✅ 工具调用执行完成");
             return results;
