@@ -5,6 +5,7 @@ import com.casy.casyaiagent.tool.OfferMailTool;
 import com.casy.casyaiagent.tool.PDFGenerationTool;
 import com.casy.casyaiagent.tool.ResourceDownloadTool;
 import com.casy.casyaiagent.tool.TerminalOperationTool;
+import com.casy.casyaiagent.tool.RequestUserInputTool;
 import com.casy.casyaiagent.tool.TerminateTool;
 import com.casy.casyaiagent.tool.WebScrapingTool;
 import com.casy.casyaiagent.tool.WebSearchTool;
@@ -45,7 +46,8 @@ public class ToolRegistration {
         TerminalOperationTool terminalOperationTool = new TerminalOperationTool();
         PDFGenerationTool pdfGenerationTool = new PDFGenerationTool();
         TerminateTool terminateTool = new TerminateTool();
+        RequestUserInputTool requestUserInputTool = new RequestUserInputTool();
         // offerMailTool 直接从 Spring 容器注入，不需要 new
-        return ToolCallbacks.from(fileOperationTool, webSearchTool, webScrapingTool, resourceDownloadTool, terminalOperationTool, pdfGenerationTool, offerMailTool, terminateTool);
+        return ToolCallbacks.from(fileOperationTool, webSearchTool, webScrapingTool, resourceDownloadTool, terminalOperationTool, pdfGenerationTool, offerMailTool, terminateTool, requestUserInputTool);
     }
 }

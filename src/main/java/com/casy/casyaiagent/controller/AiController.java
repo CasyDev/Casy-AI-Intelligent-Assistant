@@ -140,8 +140,6 @@ public class AiController {
      */
     @GetMapping("/manus/chat")
     public SseEmitter doChatWithManus(String message) {
-        // 每次请求创建新的 CasyManus 实例（Prototype 作用域）
-//        CasyManus casyManus = casyManusProvider.getIfAvailable();
         return Global.getBean(CasyManus.class).runStream(message);
     }
 }

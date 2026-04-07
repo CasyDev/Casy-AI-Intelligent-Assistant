@@ -197,17 +197,23 @@ public abstract class BaseAgent {
                             handleStuckState();
                         }
                         String result = "Step " + stepNumber + ": " + stepResult;
+                        log.info("返回信息：{}", result);
                         // 发送每一步的结果
                         sseEmitter.send(result);
                     }
-                    // 检查是否超出步骤限制或错误状态
-                    if (currentStep >= maxSteps) {
+                    // 检查结束状态
+                    if (currentStep >= maxSteps && state != AgentState.FINISHED) {
                         state = AgentState.FINISHED;
                         sseEmitter.send("执行结束: 达到最大步骤 (" + maxSteps + ")");
-                    }
-                    if (state != AgentState.ERROR) {
-                        state = AgentState.FINISHED;
+                    } else if (state == AgentState.ERROR) {
                         sseEmitter.send("执行结束: 智能体异常请稍后再试！");
+                    } else if (state == AgentState.FINISHED) {
+                        // 【新增】发送最后一条 AI 回复给前端
+                        String finalReply = getLastAssistantReply();
+                        if (finalReply != null && !finalReply.isEmpty()) {
+                            sseEmitter.send(finalReply);
+                        }
+                        sseEmitter.send("执行结束: 任务已完成");
                     }
                     // 正常完成
                     sseEmitter.complete();
@@ -266,6 +272,25 @@ public abstract class BaseAgent {
         }
     }
 
+
+    /**
+     * 获取最后一条 AI 助手的回复内容
+     * 
+     * @return 最后一条助手消息的内容，如果没有则返回 null
+     */
+    protected String getLastAssistantReply() {
+        for (int i = messageList.size() - 1; i >= 0; i--) {
+            Message msg = messageList.get(i);
+            if (msg instanceof AssistantMessage) {
+                AssistantMessage assistantMsg = (AssistantMessage) msg;
+                String text = assistantMsg.getText();
+                if (text != null && !text.isEmpty()) {
+                    return text;
+                }
+            }
+        }
+        return null;
+    }
 
     /**
      * 清理资源

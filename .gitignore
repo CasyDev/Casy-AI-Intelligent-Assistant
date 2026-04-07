@@ -32,6 +32,12 @@ build/
 ### VS Code ###
 .vscode/
 
+### Node.js / Frontend ###
+**/node_modules/
+**/dist/
+**/.env
+**/.env.local
+
 ### 忽略本地配置 ###
 src/main/resources/application-local.yml.back
 src/main/resources/application-local.yml

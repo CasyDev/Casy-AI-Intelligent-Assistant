@@ -1,6 +1,8 @@
 package com.casy.casyaiagent.agent;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
@@ -8,6 +10,8 @@ import org.springframework.ai.tool.execution.ToolExecutionExceptionProcessor;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+
+import java.util.UUID;
 
 /**
  * CasyManus是可以直接提供给其他方法调用的AI超级智能体实例，
@@ -20,14 +24,14 @@ import org.springframework.stereotype.Component;
 @Scope(value = BeanDefinition.SCOPE_PROTOTYPE)
 public class CasyManus extends ToolCallAgent {
 
-    public CasyManus(ToolCallback[] availableTools, ChatModel dashscopeChatModel, ToolExecutionExceptionProcessor toolExecutionExceptionProcessor,  ToolCallbackProvider toolCallbackProvider) {
+    public CasyManus(ToolCallback[] availableTools, ChatModel dashscopeChatModel, ToolExecutionExceptionProcessor toolExecutionExceptionProcessor, ToolCallbackProvider toolCallbackProvider, MessageChatMemoryAdvisor chatMemoryAdvisor) {
         super(availableTools, toolExecutionExceptionProcessor);
         this.setName("casyManus");
-        
+
         int maxSteps = 10;
         int planSteps = maxSteps / 3;
         int checkInterval = maxSteps / 2;
-        
+
         String systemPrompt = String.format("""
                 你是CasyManus，一款全能型人工智能助手，旨在处理用户提出的任何任务。
                 你拥有多种可随时调用的工具，能够高效完成各类复杂的需求。
@@ -51,9 +55,36 @@ public class CasyManus extends ToolCallAgent {
                 2. **不要只是口头说** "调用工具：xxx" 或 "我将调用 xxx"，这样工具不会被执行！
                 3. 如果你确实需要某个工具，直接调用它，系统会返回结果，然后你根据结果继续下一步。
                 4. 当你决定结束任务时，必须**实际调用** doTerminate 工具，而不仅仅是口头说。只有实际调用工具才能真正结束任务！
+                
+                【requestUserInput 工具 - 强制性要求】
+                
+                ⚠️ **重要：当你缺少必要信息时，必须调用 requestUserInput 工具，绝对不能只是口头提示用户！**
+                
+                什么情况下必须调用 requestUserInput：
+                - 用户说"帮我规划旅行" → 你没有目的地、时间、预算信息 → **立即调用 requestUserInput**
+                - 用户说"查询天气" → 你不知道城市名称 → **立即调用 requestUserInput**
+                - 用户说"搜索餐厅" → 你不知道位置或偏好 → **立即调用 requestUserInput**
+                - 任何情况下，如果你发现缺少必要信息才能继续 → **立即调用 requestUserInput**
+                
+                ❌ 错误做法（绝对禁止）：
+                - 只是回复说"请告诉我您的旅行目的地..."
+                - 只是回复说"我需要知道..."
+                - 只是回复说"请提供..."
+                
+                ✅ 正确做法（必须执行）：
+                - 直接调用 requestUserInput 工具
+                - 参数 prompt 要清晰说明需要什么信息
+                - 例如：prompt="请告诉我您的旅行目的地、出行日期和预算范围"
+                
+                【关键区别】
+                - 口头回复：用户收不到提示，任务会继续执行，你会陷入循环
+                - 调用工具：系统会暂停任务，前端会显示输入框让用户填写
+                
+                **记住：如果你回复的内容包含"请告诉我"、"请提供"、"我需要知道"等字样，说明你只是口头提示，这是错误的！**
+                **正确的做法是立即调用 requestUserInput 工具！**
                 """, maxSteps, planSteps, maxSteps, checkInterval);
         this.setSystemPrompt(systemPrompt);
-        
+
         String nextStepPrompt = String.format("""
                 【步骤限制提醒】你最多只能执行 %d 个步骤，当前请合理安排！
                 
@@ -69,13 +100,19 @@ public class CasyManus extends ToolCallAgent {
                 - 调用工具后系统会自动返回结果，然后你继续下一步
                 - 剩余步骤少于3步时，必须优先完成核心任务
                 - 如果无法在剩余步骤内完成，请调用 terminate 结束并说明情况
+                
+                【再次提醒 - requestUserInput 工具】
+                如果你发现缺少用户必要信息（如目的地、时间、预算等），**必须调用 requestUserInput 工具**！
+                绝对不要只是口头说"请告诉我..."，那样工具不会被执行！
                 """, maxSteps);
         this.setNextStepPrompt(nextStepPrompt);
-        
+
         this.setMaxSteps(maxSteps);
         // 初始化客户端
         ChatClient chatClient = ChatClient.builder(dashscopeChatModel)
 //                .defaultAdvisors(new PromptLoggingAdvisor())
+                .defaultAdvisors(chatMemoryAdvisor)
+                .defaultAdvisors(a -> a.param(ChatMemory.CONVERSATION_ID, UUID.randomUUID().toString()))
                 .defaultToolCallbacks(toolCallbackProvider) // MCP
                 .build();
         this.setChatClient(chatClient);

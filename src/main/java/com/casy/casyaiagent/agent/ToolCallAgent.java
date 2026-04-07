@@ -90,6 +90,65 @@ public class ToolCallAgent extends ReActAgent {
                 lowerResult.contains("我需要调用") ||
                 lowerResult.contains("让我调用"));
     }
+    
+    /**
+     * 检测 AI 是否只是口头上提示用户输入，但没有调用 requestUserInput 工具
+     * 例如 AI 说"请告诉我您的目的地"但没有调用 requestUserInput 工具
+     * 
+     * @param result AI 的思考结果文本
+     * @return 是否只是口头上提示用户输入
+     */
+    private boolean isUserInputRequestMentionedButNotExecuted(String result) {
+        if (result == null || result.isEmpty()) {
+            return false;
+        }
+        String lowerResult = result.toLowerCase();
+        // 检测常见的请求用户输入的表达（但没有调用工具）
+        boolean containsRequestPhrase = 
+                lowerResult.contains("请告诉我") ||
+                lowerResult.contains("请提供") ||
+                lowerResult.contains("请说明") ||
+                lowerResult.contains("我需要知道") ||
+                lowerResult.contains("我需要您提供") ||
+                lowerResult.contains("以便我为您") ||
+                (lowerResult.contains("需要您") && lowerResult.contains("提供"));
+        
+        // 如果包含请求短语，但没有明确说明要调用工具，则认为是口头提示
+        if (containsRequestPhrase) {
+            // 排除已经明确说要调用工具的情况
+            boolean explicitlyCallingTool = 
+                    lowerResult.contains("调用 requestuserinput") ||
+                    lowerResult.contains("调用requestuserinput") ||
+                    lowerResult.contains("我将调用 requestuserinput");
+            
+            return !explicitlyCallingTool;
+        }
+        
+        return false;
+    }
+
+    /**
+     * 获取最后一条消息的内容（任何类型）
+     * 
+     * @return 最后一条消息的内容，如果没有则返回 null
+     */
+    private String getLastMessageContent() {
+        List<Message> messages = getMessageList();
+        if (messages.isEmpty()) {
+            return null;
+        }
+        Message lastMsg = messages.get(messages.size() - 1);
+        if (lastMsg instanceof AssistantMessage) {
+            return ((AssistantMessage) lastMsg).getText();
+        } else if (lastMsg instanceof ToolResponseMessage) {
+            // 获取工具响应消息的内容
+            ToolResponseMessage toolMsg = (ToolResponseMessage) lastMsg;
+            if (!toolMsg.getResponses().isEmpty()) {
+                return toolMsg.getResponses().get(0).responseData();
+            }
+        }
+        return null;
+    }
 
     /**
      * 生成初始执行计划
@@ -150,6 +209,23 @@ public class ToolCallAgent extends ReActAgent {
             log.error("[{}] 连续异常次数达到 {} 次，终止任务", getName(), getMaxConsecutiveErrors());
             setState(AgentState.ERROR);
             getMessageList().add(new SystemMessage("任务终止：连续多次调用工具失败，请稍后重试。"));
+            return false;
+        }
+        
+        // 【新增】检测是否陷入循环状态（AI 重复相同回复多次）
+        // 当 AI 无法继续推进任务且重复提示用户补充信息时，自动结束任务
+        if (isStuck()) {
+            log.warn("[{}] 检测到 AI 陷入循环，自动结束任务并返回最后回复", getName());
+            setState(AgentState.FINISHED);
+            return false;
+        }
+        
+        // 【新增】检测最后一条消息是否包含用户输入请求标记
+        // 如果 AI 调用了 requestUserInput 工具，工具会返回特殊标记
+        String lastMsgContent = getLastMessageContent();
+        if (lastMsgContent != null && lastMsgContent.contains("[USER_INPUT_REQUEST]")) {
+            log.info("[{}] 检测到用户输入请求，任务暂停等待用户输入", getName());
+            setState(AgentState.FINISHED);
             return false;
         }
         
@@ -221,7 +297,22 @@ public class ToolCallAgent extends ReActAgent {
                     return false;  // 返回 false，让下一步重新思考
                 }
                 
-                // 【兜底机制2】检测 AI 表示要结束任务但实际上没有调用 terminate 工具的情况
+                // 【兜底机制2】检测 AI 只是口头提示用户输入但没有调用 requestUserInput 工具的情况
+                if (isUserInputRequestMentionedButNotExecuted(result)) {
+                    log.warn("⚠️ AI 口头提示需要用户输入但未调用 requestUserInput 工具，将强制要求调用工具");
+                    // 添加系统消息强制 AI 调用 requestUserInput 工具
+                    getMessageList().add(new SystemMessage("""
+                        ⚠️ 系统警告：你只是口头提示用户需要提供信息，但没有调用 requestUserInput 工具！
+                        
+                        这是错误的！口头提示不会被用户看到，你必须调用 requestUserInput 工具才能暂停任务并显示输入框。
+                        
+                        请立即调用 requestUserInput 工具，传入清晰的 prompt 参数说明需要什么信息。
+                        不要只是口头回复，必须真正调用工具！
+                        """));
+                    return false;  // 返回 false，让下一步重新思考并调用工具
+                }
+                
+                // 【兜底机制3】检测 AI 表示要结束任务但实际上没有调用 terminate 工具的情况
                 if (isTerminateIntention(result)) {
                     log.warn("⚠️ AI 表示要结束任务但未实际调用 terminate 工具，将生成最终总结后结束");
                     needFinalSummary = true;  // 设置标记，让下一步生成最终总结
@@ -343,6 +434,20 @@ public class ToolCallAgent extends ReActAgent {
                 log.info("🏁 检测到终止工具调用，下一步将生成最终总结");
                 needFinalSummary = true;
                 return "任务结束，准备生成最终总结";
+            }
+            
+            // 【新增】当调用了 requestUserInput 工具时，立即结束任务等待用户输入
+            if (toolResponseMessage.getResponses().stream().anyMatch(res -> StrUtil.equals("requestUserInput", res.name()))) {
+                log.info("📝 检测到用户输入请求，任务暂停等待用户输入");
+                // 获取工具返回的提示信息
+                String inputPrompt = toolResponseMessage.getResponses().stream()
+                    .filter(res -> StrUtil.equals("requestUserInput", res.name()))
+                    .findFirst()
+                    .map(res -> res.responseData())
+                    .orElse("请提供补充信息");
+                // 设置状态为 FINISHED，结束当前任务
+                setState(AgentState.FINISHED);
+                return "等待用户输入: " + inputPrompt;
             }
             
             // 【关键】重置连续异常计数，工具调用成功
