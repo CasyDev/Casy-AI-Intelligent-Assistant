@@ -71,6 +71,25 @@ public class ToolCallAgent extends ReActAgent {
         return (lowerResult.contains("terminate") ||
                 lowerResult.contains("结束任务"));
     }
+    
+    /**
+     * 检测 AI 是否只是口头上说要调用工具，但实际上没有生成 tool_calls
+     * 例如 AI 说"调用工具：maps_around_search"但没有真正的工具调用
+     * 
+     * @param result AI 的思考结果文本
+     * @return 是否只是口头上说调用工具
+     */
+    private boolean isToolCallMentionedButNotExecuted(String result) {
+        if (result == null || result.isEmpty()) {
+            return false;
+        }
+        String lowerResult = result.toLowerCase();
+        // 检测常见的"口嗨"表达
+        return (lowerResult.contains("调用工具") ||
+                lowerResult.contains("我将调用") ||
+                lowerResult.contains("我需要调用") ||
+                lowerResult.contains("让我调用"));
+    }
 
     /**
      * 生成初始执行计划
@@ -125,6 +144,14 @@ public class ToolCallAgent extends ReActAgent {
         log.info("╔══════════════════════════════════════════════════════════════╗");
         log.info("║  [{}] 开始第 {} 步思考", getName(), getCurrentStep());
         log.info("╚══════════════════════════════════════════════════════════════╝");
+        
+        // 检查是否超过最大连续异常次数
+        if (getConsecutiveErrorCount() >= getMaxConsecutiveErrors()) {
+            log.error("[{}] 连续异常次数达到 {} 次，终止任务", getName(), getMaxConsecutiveErrors());
+            setState(AgentState.ERROR);
+            getMessageList().add(new SystemMessage("任务终止：连续多次调用工具失败，请稍后重试。"));
+            return false;
+        }
         
         // 【特殊处理】如果上一步调用了终止工具，现在生成最终总结
         if (needFinalSummary) {
@@ -181,7 +208,19 @@ public class ToolCallAgent extends ReActAgent {
                 // 不调用工具时
                 log.info("💭 AI 思考结果: {}", result);
                 
-                // 【兜底机制】检测 AI 表示要结束任务但实际上没有调用 terminate 工具的情况
+                // 【兜底机制1】检测 AI 只是口头上说要调用工具，但实际上没有生成 tool_calls 的情况
+                if (isToolCallMentionedButNotExecuted(result)) {
+                    log.warn("⚠️ AI 口头上说要调用工具但未实际调用，将提示 AI 真正调用工具");
+                    // 添加系统消息提示 AI 需要真正调用工具
+                    getMessageList().add(new SystemMessage("""
+                        系统提示：你刚才说要调用工具，但实际上工具并未被执行。
+                        请注意：口头描述"调用工具：xxx"不会让工具执行，必须真正调用工具。
+                        如果你确实需要工具，请直接调用它；如果不需要，请继续分析当前已有的信息。
+                        """));
+                    return false;  // 返回 false，让下一步重新思考
+                }
+                
+                // 【兜底机制2】检测 AI 表示要结束任务但实际上没有调用 terminate 工具的情况
                 if (isTerminateIntention(result)) {
                     log.warn("⚠️ AI 表示要结束任务但未实际调用 terminate 工具，将生成最终总结后结束");
                     needFinalSummary = true;  // 设置标记，让下一步生成最终总结
@@ -214,8 +253,38 @@ public class ToolCallAgent extends ReActAgent {
                 return true;
             }
         } catch (Exception e) {
+            /**
+             * 解决400报错，An assistant message with "tool_calls" must be followed by tool messages responding to each "tool_call_id"
+             * 报错日志：[casy-ai-agent] [onPool-worker-4] c.casy.casyaiagent.agent.ToolCallAgent :
+             * 🤔 AI 正在思考... 2026-04-07T11:59:30.399+08:00 WARN 3728 --- [casy-ai-agent] [onPool-worker-4] o.s.a.r.a.SpringAiRetryAutoConfiguration :
+             * Retry error. Retry count: 1, Exception:
+             * HTTP 400 - {"request_id":"fb41f7f7-2ec6-9499-a261-8367cb2f0f1c","code":"InvalidParameter",
+             * "message":"<400> InternalError.Algo.InvalidParameter: An assistant message with "tool_calls" must be followed by tool messages responding to each "tool_call_id".
+             * The following tool_call_ids did not have response messages: message[5].role"}
+             *
+             * 原因是 OpenAI / DashScope 等模型 API 的严格消息顺序要求
+             * 当 assistant 消息包含 tool_calls 时，
+             * 下一个消息必须是 tool 类型的响应（对应每个 tool_call_id），
+             * 然后才能是下一个 assistant 消息
+             *
+             * 原代码是：    getMessageList().add(new AssistantMessage("处理时遇到错误: " + e.getMessage()));
+             * 导致步骤变成了
+             * [0] system: "你是一个智能助手..."
+             * [1] user: "北京丰台站附近有什么好吃的？"
+             * [2] assistant (带 tool_calls): {
+             *       "tool_calls": [{"id": "call_abc123", ...}]  // ← AI 想调用工具
+             *     }
+             * [3] assistant: "处理时遇到错误: HTTP 400..."   // ❌ 错误！又一个 assistant！
+             *                                                // 期望的是 tool 响应
+             *
+             * 要使用，system 消息不会干扰 tool_calls 的执行流程
+             *
+             */
             log.error(getName() + "的思考过程遇到了问题: " + e.getMessage(), e);
-            getMessageList().add(new AssistantMessage("处理时遇到错误: " + e.getMessage()));
+            // 【修复】使用 SystemMessage 而非 AssistantMessage，避免破坏 tool_calls 消息顺序
+            getMessageList().add(new SystemMessage("系统提示：AI 处理时遇到错误: " + e.getMessage() + "。请重试或调整策略。"));
+            // 增加连续异常计数
+            incrementConsecutiveErrorCount();
             return false;
         }
     }
@@ -236,42 +305,54 @@ public class ToolCallAgent extends ReActAgent {
             return "没有工具调用";
         }
         
-        // 调用工具
-        log.info("🚀 正在执行工具调用...");
-        Prompt prompt = new Prompt(getMessageList(), chatOptions);
-        ToolExecutionResult toolExecutionResult = toolCallingManager.executeToolCalls(prompt, toolCallChatResponse);
+        // 重置连续异常计数，因为即将执行工具
+        resetConsecutiveErrorCount();
         
-        // 记录消息上下文，conversationHistory 已经包含了助手消息和工具调用返回的结果
-        setMessageList(toolExecutionResult.conversationHistory());
-        
-        // 当前工具调用的结果
-        ToolResponseMessage toolResponseMessage = (ToolResponseMessage) CollUtil.getLast(toolExecutionResult.conversationHistory());
-        
-        // 记录每个工具的执行结果
-        log.info("📈 工具执行结果:");
-        for (int i = 0; i < toolResponseMessage.getResponses().size(); i++) {
-            ToolResponseMessage.ToolResponse response = toolResponseMessage.getResponses().get(i);
-            String resultData = response.responseData();
-            // 截断过长的结果
-            String displayResult = resultData != null && resultData.length() > 200 
-                ? resultData.substring(0, 200) + "... (共" + resultData.length() + "字符)" 
-                : resultData;
-            log.info("  ├─ 工具 [{}]: {}", i + 1, response.name());
-            log.info("  │   结果: {}", displayResult);
+        try {
+            // 调用工具
+            log.info("🚀 正在执行工具调用...");
+            Prompt prompt = new Prompt(getMessageList(), chatOptions);
+            ToolExecutionResult toolExecutionResult = toolCallingManager.executeToolCalls(prompt, toolCallChatResponse);
+            
+            // 记录消息上下文，conversationHistory 已经包含了助手消息和工具调用返回的结果
+            setMessageList(toolExecutionResult.conversationHistory());
+            
+            // 当前工具调用的结果
+            ToolResponseMessage toolResponseMessage = (ToolResponseMessage) CollUtil.getLast(toolExecutionResult.conversationHistory());
+            
+            // 记录每个工具的执行结果
+            log.info("📈 工具执行结果:");
+            for (int i = 0; i < toolResponseMessage.getResponses().size(); i++) {
+                ToolResponseMessage.ToolResponse response = toolResponseMessage.getResponses().get(i);
+                String resultData = response.responseData();
+                // 截断过长的结果
+                String displayResult = resultData != null && resultData.length() > 200 
+                    ? resultData.substring(0, 200) + "... (共" + resultData.length() + "字符)" 
+                    : resultData;
+                log.info("  ├─ 工具 [{}]: {}", i + 1, response.name());
+                log.info("  │   结果: {}", displayResult);
+            }
+            
+            String results = toolResponseMessage.getResponses().stream()
+                .map(res -> "工具 " + res.name() + " 执行完成，结果: " + res.responseData())
+                .collect(Collectors.joining("\n"));
+            
+            // 当调用了终止工具时，设置标记让下一步生成最终总结
+            if (toolResponseMessage.getResponses().stream().anyMatch(res -> StrUtil.equals("doTerminate", res.name()))) {
+                log.info("🏁 检测到终止工具调用，下一步将生成最终总结");
+                needFinalSummary = true;
+                return "任务结束，准备生成最终总结";
+            }
+            
+            log.info("✅ 工具调用执行完成");
+            return results;
+        } catch (Exception e) {
+            log.error("[{}] 工具执行异常: {}", getName(), e.getMessage(), e);
+            // 增加连续异常计数
+            incrementConsecutiveErrorCount();
+            // 添加系统消息通知 AI 工具执行失败
+            getMessageList().add(new SystemMessage("系统提示：工具执行失败，错误信息: " + e.getMessage() + "。请检查参数后重试或更换工具。"));
+            return "工具执行失败: " + e.getMessage();
         }
-        
-        String results = toolResponseMessage.getResponses().stream()
-            .map(res -> "工具 " + res.name() + " 执行完成，结果: " + res.responseData())
-            .collect(Collectors.joining("\n"));
-        
-        // 当调用了终止工具时，设置标记让下一步生成最终总结
-        if (toolResponseMessage.getResponses().stream().anyMatch(res -> StrUtil.equals("doTerminate", res.name()))) {
-            log.info("🏁 检测到终止工具调用，下一步将生成最终总结");
-            needFinalSummary = true;
-            return "任务结束，准备生成最终总结";
-        }
-        
-        log.info("✅ 工具调用执行完成");
-        return results;
     }
 }

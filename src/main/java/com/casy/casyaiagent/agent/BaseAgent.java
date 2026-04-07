@@ -49,6 +49,10 @@ public abstract class BaseAgent {
 
     // 重复域值
     private int duplicateThreshold = 2;
+    
+    // 连续异常控制
+    private int consecutiveErrorCount = 0;  // 当前连续异常次数
+    private int maxConsecutiveErrors = 3;   // 最大允许的连续异常次数
 
     /**
      * 运行代理
@@ -239,6 +243,24 @@ public abstract class BaseAgent {
      * @return 步骤执行结果
      */
     public abstract String step();
+    
+    /**
+     * 增加连续异常计数
+     */
+    protected void incrementConsecutiveErrorCount() {
+        this.consecutiveErrorCount++;
+        log.warn("[{}] 连续异常次数: {}/{}", getName(), this.consecutiveErrorCount, this.maxConsecutiveErrors);
+    }
+    
+    /**
+     * 重置连续异常计数（在成功执行后调用）
+     */
+    protected void resetConsecutiveErrorCount() {
+        if (this.consecutiveErrorCount > 0) {
+            log.info("[{}] 重置连续异常计数", getName());
+            this.consecutiveErrorCount = 0;
+        }
+    }
 
 
     /**
