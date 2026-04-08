@@ -1,14 +1,6 @@
 package com.casy.casyaiagent.config;
 
-import com.casy.casyaiagent.tool.FileOperationTool;
-import com.casy.casyaiagent.tool.OfferMailTool;
-import com.casy.casyaiagent.tool.PDFGenerationTool;
-import com.casy.casyaiagent.tool.ResourceDownloadTool;
-import com.casy.casyaiagent.tool.TerminalOperationTool;
-import com.casy.casyaiagent.tool.RequestUserInputTool;
-import com.casy.casyaiagent.tool.TerminateTool;
-import com.casy.casyaiagent.tool.WebScrapingTool;
-import com.casy.casyaiagent.tool.WebSearchTool;
+import com.casy.casyaiagent.tool.*;
 import jakarta.annotation.Resource;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
@@ -37,6 +29,12 @@ public class ToolRegistration {
     @Resource
     private OfferMailTool offerMailTool;
 
+    @Resource
+    private ImageSearchTool imageSearchTool;
+
+    @Resource
+    private AmapTools amapTools;
+
     @Bean
     public ToolCallback[] allTools() {
         FileOperationTool fileOperationTool = new FileOperationTool();
@@ -47,7 +45,10 @@ public class ToolRegistration {
         PDFGenerationTool pdfGenerationTool = new PDFGenerationTool();
         TerminateTool terminateTool = new TerminateTool();
         RequestUserInputTool requestUserInputTool = new RequestUserInputTool();
-        // offerMailTool 直接从 Spring 容器注入，不需要 new
-        return ToolCallbacks.from(fileOperationTool, webSearchTool, webScrapingTool, resourceDownloadTool, terminalOperationTool, pdfGenerationTool, offerMailTool, terminateTool, requestUserInputTool);
+        // offerMailTool、imageSearchTool、amapTools 直接从 Spring 容器注入
+        return ToolCallbacks.from(fileOperationTool, webSearchTool, webScrapingTool, 
+                resourceDownloadTool, terminalOperationTool, pdfGenerationTool, 
+                offerMailTool, imageSearchTool, terminateTool, requestUserInputTool, 
+                amapTools);
     }
 }

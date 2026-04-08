@@ -24,9 +24,18 @@ import java.util.UUID;
 @Scope(value = BeanDefinition.SCOPE_PROTOTYPE)
 public class CasyManus extends ToolCallAgent {
 
+    // 依赖组件，用于重建 ChatClient
+    private final ChatModel chatModel;
+    private final MessageChatMemoryAdvisor chatMemoryAdvisor;
+    private final ToolCallbackProvider toolCallbackProvider;
+
     public CasyManus(ToolCallback[] availableTools, ChatModel dashscopeChatModel, ToolExecutionExceptionProcessor toolExecutionExceptionProcessor, ToolCallbackProvider toolCallbackProvider, MessageChatMemoryAdvisor chatMemoryAdvisor) {
         super(availableTools, toolExecutionExceptionProcessor);
         this.setName("casyManus");
+        // 保存依赖，以便后续重建 ChatClient
+        this.chatModel = dashscopeChatModel;
+        this.chatMemoryAdvisor = chatMemoryAdvisor;
+        this.toolCallbackProvider = toolCallbackProvider;
 
         int maxSteps = 10;
         int planSteps = maxSteps / 3;
@@ -108,13 +117,37 @@ public class CasyManus extends ToolCallAgent {
         this.setNextStepPrompt(nextStepPrompt);
 
         this.setMaxSteps(maxSteps);
-        // 初始化客户端
-        ChatClient chatClient = ChatClient.builder(dashscopeChatModel)
+        // 初始化客户端，使用随机的 chatId
+        initChatClient(UUID.randomUUID().toString());
+    }
+
+    /**
+     * 初始化 ChatClient，使用指定的 chatId 作为 conversation_id
+     *
+     * @param chatId 对话ID，用于保持对话记忆
+     */
+    private void initChatClient(String chatId) {
+        ChatClient chatClient = ChatClient.builder(chatModel)
 //                .defaultAdvisors(new PromptLoggingAdvisor())
                 .defaultAdvisors(chatMemoryAdvisor)
-                .defaultAdvisors(a -> a.param(ChatMemory.CONVERSATION_ID, UUID.randomUUID().toString()))
-                .defaultToolCallbacks(toolCallbackProvider) // MCP
+                .defaultAdvisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatId))
+                .defaultToolCallbacks(toolCallbackProvider)
                 .build();
         this.setChatClient(chatClient);
+        this.setChatId(chatId);
+    }
+
+    /**
+     * 设置对话ID，用于保持对话记忆。
+     * 当需要继续之前的对话时，调用此方法设置相同的chatId。
+     *
+     * @param chatId 对话ID
+     */
+    public void setConversationId(String chatId) {
+        if (chatId == null || chatId.isEmpty()) {
+            return;
+        }
+        // 重建 ChatClient，使用新的 chatId
+        initChatClient(chatId);
     }
 }

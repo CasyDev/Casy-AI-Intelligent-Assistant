@@ -53,6 +53,9 @@ public abstract class BaseAgent {
     // 连续异常控制
     private int consecutiveErrorCount = 0;  // 当前连续异常次数
     private int maxConsecutiveErrors = 3;   // 最大允许的连续异常次数
+    
+    // 对话ID，用于保持对话记忆
+    private String chatId;
 
     /**
      * 运行代理

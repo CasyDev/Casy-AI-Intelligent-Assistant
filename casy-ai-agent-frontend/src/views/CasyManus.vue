@@ -114,7 +114,14 @@
             <!-- 步骤指示器 -->
             <div v-else-if="message.type === 'step'" class="mb-4">
               <div class="flex items-center space-x-3 px-4 py-2 bg-kimi-card/50 border border-kimi-border rounded-lg">
-                <div class="w-5 h-5 border-2 border-kimi-primary border-t-transparent rounded-full animate-spin"></div>
+                <!-- 当前正在执行的步骤显示转圈 -->
+                <div v-if="message.isCurrent" class="w-5 h-5 border-2 border-kimi-primary border-t-transparent rounded-full animate-spin"></div>
+                <!-- 已完成的步骤显示成功图标 -->
+                <div v-else class="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <svg class="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
                 <span class="text-kimi-text-secondary text-sm">{{ message.content }}</span>
               </div>
             </div>
@@ -291,9 +298,11 @@ const inputMessage = ref('')
 const isLoading = ref(false)
 const isExecuting = ref(false)
 const waitingForInput = ref(false)
+const isTaskCompleted = ref(false)  // 任务是否已成功完成
 const chatContainer = ref(null)
 const textarea = ref(null)
 const eventSource = ref(null)
+const currentChatId = ref(null)  // 当前对话ID，用于保持对话记忆
 
 // 当前步骤信息
 const currentStep = ref(0)
@@ -361,12 +370,27 @@ const parseMessage = (data) => {
   if (data.startsWith('执行步骤')) {
     const match = data.match(/执行步骤 (\d+)\/(\d+)/)
     if (match) {
-      currentStep.value = parseInt(match[1])
+      const stepNum = parseInt(match[1])
+      currentStep.value = stepNum
       totalSteps.value = parseInt(match[2])
+      
+      // 将之前的步骤标记为非当前状态
+      messages.value.forEach(msg => {
+        if (msg.type === 'step') {
+          msg.isCurrent = false
+        }
+      })
+      
+      return {
+        type: 'step',
+        content: data,
+        isCurrent: true
+      }
     }
     return {
       type: 'step',
-      content: data
+      content: data,
+      isCurrent: true
     }
   }
   
@@ -433,8 +457,15 @@ const parseMessage = (data) => {
   // 执行结束
   if (data.startsWith('执行结束')) {
     isExecuting.value = false
-    // 如果是正常完成任务，不显示系统消息（除非是达到最大步骤）
+    // 标记任务已完成
     if (data.includes('任务已完成')) {
+      isTaskCompleted.value = true
+      // 将所有步骤标记为已完成
+      messages.value.forEach(msg => {
+        if (msg.type === 'step') {
+          msg.isCurrent = false
+        }
+      })
       return null  // 不显示这个系统消息
     }
     return {
@@ -476,11 +507,22 @@ const parseMessage = (data) => {
 }
 
 // 发送消息
-const sendMessage = async (text) => {
+// isUserInput: 是否是用户补充输入（从输入框提交），如果是则保留chatId
+const sendMessage = async (text, isUserInput = false) => {
   if (!text.trim() || isLoading.value) return
   
   // 重置状态
   currentStep.value = 0
+  isTaskCompleted.value = false  // 重置任务完成状态
+  
+  // 清空chatId的逻辑：
+  // 1. 如果是用户补充输入（isUserInput=true），不清空
+  // 2. 如果是新对话（messages.length <= 1），清空
+  // 3. 如果已经有chatId且不是用户补充输入，保留（继续对话）
+  if (!isUserInput && messages.value.length <= 1) {
+    currentChatId.value = null
+  }
+  
   waitingForInput.value = false
   
   // 添加用户消息
@@ -501,7 +543,11 @@ const sendMessage = async (text) => {
   // 建立 SSE 连接
   try {
     const encodedMessage = encodeURIComponent(text)
-    const url = `http://localhost:8123/api/ai/manus/chat?message=${encodedMessage}`
+    // 如果有chatId，则传递以保持对话记忆
+    let url = `http://localhost:8123/api/ai/manus/chat?message=${encodedMessage}`
+    if (currentChatId.value) {
+      url += `&chatId=${encodeURIComponent(currentChatId.value)}`
+    }
     
     eventSource.value = new EventSource(url)
     
@@ -547,9 +593,16 @@ const sendMessage = async (text) => {
       isLoading.value = false
       isExecuting.value = false
       
-      // 只有在不是等待用户输入的状态下才显示错误
-      // 如果是等待用户输入，说明是正常结束，只是连接关闭
-      if (!waitingForInput.value) {
+      // 将所有步骤标记为已完成
+      messages.value.forEach(msg => {
+        if (msg.type === 'step') {
+          msg.isCurrent = false
+        }
+      })
+      
+      // 只有在不是等待用户输入且任务未完成的状态下才显示错误
+      // 如果是等待用户输入或任务已完成，说明是正常结束，只是连接关闭
+      if (!waitingForInput.value && !isTaskCompleted.value) {
         messages.value.push({
           type: 'system',
           content: '连接出现错误，请稍后重试。'
@@ -561,6 +614,12 @@ const sendMessage = async (text) => {
     eventSource.value.onclose = () => {
       isLoading.value = false
       isExecuting.value = false
+      // 连接关闭时，将所有步骤标记为已完成
+      messages.value.forEach(msg => {
+        if (msg.type === 'step') {
+          msg.isCurrent = false
+        }
+      })
     }
   } catch (error) {
     console.error('Error:', error)
@@ -587,7 +646,14 @@ const clearChat = () => {
   isLoading.value = false
   isExecuting.value = false
   waitingForInput.value = false
+  isTaskCompleted.value = false  // 重置任务完成状态
   currentStep.value = 0
+  currentChatId.value = null  // 清空对话ID
+}
+
+// 生成唯一的对话ID
+const generateChatId = () => {
+  return 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
 }
 
 // 提交用户输入的补充信息
@@ -601,9 +667,14 @@ const submitUserInput = (index) => {
   // 获取用户输入
   const userResponse = message.userInput.trim()
   
-  // 继续对话，发送用户输入（sendMessage 会添加用户消息）
+  // 如果是第一次用户输入补充，生成chatId以保持对话记忆
+  if (!currentChatId.value) {
+    currentChatId.value = generateChatId()
+  }
+  
+  // 继续对话，发送用户输入（isUserInput=true 表示这是补充输入，保留chatId）
   setTimeout(() => {
-    sendMessage(userResponse)
+    sendMessage(userResponse, true)
   }, 100)
 }
 

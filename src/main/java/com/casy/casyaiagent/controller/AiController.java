@@ -135,11 +135,20 @@ public class AiController {
     /**
      * 流式调用 Manus 超级智能体
      *
-     * @param message
-     * @return
+     * @param message 用户消息
+     * @param chatId  对话ID，用于保持对话记忆。如果不传，会创建新的对话
+     * @return SseEmitter 流式响应
      */
     @GetMapping("/manus/chat")
-    public SseEmitter doChatWithManus(String message) {
-        return Global.getBean(CasyManus.class).runStream(message);
+    public SseEmitter doChatWithManus(String message, String chatId) {
+        // 获取新的 CasyManus 实例（Prototype 作用域，每次获取都是新的）
+        CasyManus casyManus = Global.getBean(CasyManus.class);
+        
+        // 如果传入了 chatId，设置对话ID以保持记忆
+        if (chatId != null && !chatId.isEmpty()) {
+            casyManus.setConversationId(chatId);
+        }
+        
+        return casyManus.runStream(message);
     }
 }
