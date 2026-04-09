@@ -1,0 +1,44 @@
+spring:
+  ai:
+    dashscope:
+      chat:
+        options:
+          model: qwen-turbo  # 这里指定具体模型
+      api-key: dashScopeKey
+  # 邮件配置（QQ邮箱）
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: xxxx@qq.com          # 替换为你的QQ邮箱
+    password: xxxxxxxx  # 替换为QQ邮箱授权码（不是登录密码）
+    protocol: smtp
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          ssl:
+            enable: true
+          socketFactory:
+            class: javax.net.ssl.SSLSocketFactory
+
+# 百度翻译
+baidu:
+  translate:
+    appid: XXXX
+    secretKey: XXXXX
+
+# 联网搜索API
+search_api:
+  api_key: XXXXXXX
+
+# 天气查询API
+u_api_pro:
+  api_key: XXXXXXXXXXX
+
+# 高德地图API配置
+amap:
+  api:
+    key: xxxxxxxxx  # 从环境变量读取，部署时设置 AMAP_API_KEY

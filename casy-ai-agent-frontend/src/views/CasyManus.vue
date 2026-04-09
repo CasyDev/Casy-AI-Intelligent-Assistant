@@ -46,7 +46,7 @@
             </svg>
           </div>
           <h3 class="text-xl font-semibold text-white mb-2">我是你的 AI 超级智能体</h3>
-          <p class="text-kimi-text-secondary max-w-md mx-auto mb-6">
+          <p class="text-kimi-text-secondary mx-auto mb-6 whitespace-nowrap">
             我可以帮你完成复杂任务，自动规划步骤、调用工具、执行操作。
           </p>
           <div class="flex flex-wrap justify-center gap-2">
