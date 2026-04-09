@@ -147,6 +147,7 @@
 import { ref, onMounted, nextTick, onUnmounted } from 'vue'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
+import config from '../config'
 
 // 生成唯一会话 ID
 const generateChatId = () => {
@@ -237,7 +238,7 @@ const sendMessage = async (text) => {
   // 建立 SSE 连接
   try {
     const encodedMessage = encodeURIComponent(text)
-    const url = `http://localhost:8123/api/ai/love_app/chat/sse?message=${encodedMessage}&chatId=${chatId.value}`
+    const url = `${config.apiBaseUrl}${config.apiPrefix}/ai/love_app/chat/sse?message=${encodedMessage}&chatId=${chatId.value}`
     
     eventSource.value = new EventSource(url)
     

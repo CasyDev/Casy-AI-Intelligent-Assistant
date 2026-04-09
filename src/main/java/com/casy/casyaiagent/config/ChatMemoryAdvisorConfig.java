@@ -50,7 +50,7 @@ public class ChatMemoryAdvisorConfig {
      * 对话记忆 Advisor
      */
     @Bean
-    public MessageChatMemoryAdvisor chatMemoryAdvisor(ChatMemory chatMemory) {
-        return MessageChatMemoryAdvisor.builder(chatMemory).build();
+    public MessageChatMemoryAdvisor chatMemoryAdvisor(ChatMemory inMemoryChatMemory) {
+        return MessageChatMemoryAdvisor.builder(inMemoryChatMemory).build();
     }
 }

@@ -291,6 +291,7 @@
 import { ref, onMounted, nextTick, onUnmounted } from 'vue'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
+import config from '../config'
 
 // 状态
 const messages = ref([])
@@ -507,22 +508,12 @@ const parseMessage = (data) => {
 }
 
 // 发送消息
-// isUserInput: 是否是用户补充输入（从输入框提交），如果是则保留chatId
-const sendMessage = async (text, isUserInput = false) => {
+const sendMessage = async (text) => {
   if (!text.trim() || isLoading.value) return
   
   // 重置状态
   currentStep.value = 0
   isTaskCompleted.value = false  // 重置任务完成状态
-  
-  // 清空chatId的逻辑：
-  // 1. 如果是用户补充输入（isUserInput=true），不清空
-  // 2. 如果是新对话（messages.length <= 1），清空
-  // 3. 如果已经有chatId且不是用户补充输入，保留（继续对话）
-  if (!isUserInput && messages.value.length <= 1) {
-    currentChatId.value = null
-  }
-  
   waitingForInput.value = false
   
   // 添加用户消息
@@ -543,11 +534,8 @@ const sendMessage = async (text, isUserInput = false) => {
   // 建立 SSE 连接
   try {
     const encodedMessage = encodeURIComponent(text)
-    // 如果有chatId，则传递以保持对话记忆
-    let url = `http://localhost:8123/api/ai/manus/chat?message=${encodedMessage}`
-    if (currentChatId.value) {
-      url += `&chatId=${encodeURIComponent(currentChatId.value)}`
-    }
+    // 每次请求都携带 chatId，保持对话记忆
+    let url = `${config.sseUrl}?message=${encodedMessage}&chatId=${encodeURIComponent(currentChatId.value)}`
     
     eventSource.value = new EventSource(url)
     
@@ -588,7 +576,13 @@ const sendMessage = async (text, isUserInput = false) => {
     }
     
     eventSource.value.onerror = (error) => {
-      console.error('SSE error:', error)
+      console.log('SSE connection closed or error:', error)
+      
+      // SSE 在连接关闭时（无论是正常还是异常）都会触发 onerror
+      // 通过 readyState 判断：2 = CLOSED（已关闭）
+      // 如果 readyState 已经是 2，说明连接已正常关闭，不需要显示错误
+      const isConnectionClosed = eventSource.value?.readyState === 2
+      
       eventSource.value.close()
       isLoading.value = false
       isExecuting.value = false
@@ -600,9 +594,11 @@ const sendMessage = async (text, isUserInput = false) => {
         }
       })
       
-      // 只有在不是等待用户输入且任务未完成的状态下才显示错误
-      // 如果是等待用户输入或任务已完成，说明是正常结束，只是连接关闭
-      if (!waitingForInput.value && !isTaskCompleted.value) {
+      // 只在以下情况显示错误：
+      // 1. 不是等待用户输入状态
+      // 2. 任务未成功完成
+      // 3. 连接状态不是已关闭（readyState !== 2），说明是真的网络错误
+      if (!waitingForInput.value && !isTaskCompleted.value && !isConnectionClosed) {
         messages.value.push({
           type: 'system',
           content: '连接出现错误，请稍后重试。'
@@ -638,17 +634,31 @@ const handleSubmit = () => {
 }
 
 // 清空对话
-const clearChat = () => {
+const clearChat = async () => {
   if (eventSource.value) {
     eventSource.value.close()
   }
+  // 调用后端接口删除会话
+  await deleteChatSession()
   messages.value = []
   isLoading.value = false
   isExecuting.value = false
   waitingForInput.value = false
   isTaskCompleted.value = false  // 重置任务完成状态
   currentStep.value = 0
-  currentChatId.value = null  // 清空对话ID
+  // 重新生成 chatId，开始新对话
+  currentChatId.value = generateChatId()
+}
+
+// 删除后端会话
+const deleteChatSession = async () => {
+  if (!currentChatId.value) return
+  try {
+    await fetch(`${config.apiBaseUrl}${config.apiPrefix}/ai/manus/delete/chat?chatId=${encodeURIComponent(currentChatId.value)}`)
+    console.log('会话已删除:', currentChatId.value)
+  } catch (error) {
+    console.error('删除会话失败:', error)
+  }
 }
 
 // 生成唯一的对话ID
@@ -664,29 +674,40 @@ const submitUserInput = (index) => {
   message.submitted = true
   waitingForInput.value = false
   
-  // 获取用户输入
-  const userResponse = message.userInput.trim()
+  // 获取用户输入，并添加提示词前缀
+  const userInput = message.userInput.trim()
+  const promptPrefix = `【用户补充信息】${message.prompt}\n用户回答：`
+  const userResponse = promptPrefix + userInput
   
-  // 如果是第一次用户输入补充，生成chatId以保持对话记忆
-  if (!currentChatId.value) {
-    currentChatId.value = generateChatId()
-  }
-  
-  // 继续对话，发送用户输入（isUserInput=true 表示这是补充输入，保留chatId）
+  // 继续对话，发送用户输入（带提示词）
   setTimeout(() => {
-    sendMessage(userResponse, true)
+    sendMessage(userResponse)
   }, 100)
 }
 
-// 组件卸载时关闭连接
+// 页面关闭或刷新前删除会话
+const handleBeforeUnload = () => {
+  deleteChatSession()
+}
+
+// 组件卸载时关闭连接并删除会话
 onUnmounted(() => {
   if (eventSource.value) {
     eventSource.value.close()
   }
+  deleteChatSession()
+  // 移除页面关闭事件监听
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 
 onMounted(() => {
+  // 进入页面时生成 chatId
+  if (!currentChatId.value) {
+    currentChatId.value = generateChatId()
+  }
   textarea.value?.focus()
+  // 添加页面关闭事件监听
+  window.addEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
 

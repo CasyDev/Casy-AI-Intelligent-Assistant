@@ -5,7 +5,7 @@ FROM openjdk:21-slim
 WORKDIR /app
 
 # 复制已经打包好的JAR文件（假设已放在当前目录）
-COPY target/yu-ai-agent-0.0.1-SNAPSHOT.jar app.jar
+COPY target/casy-ai-agent-0.0.1-SNAPSHOT.jar app.jar
 
 # 暴露应用端口
 EXPOSE 8123

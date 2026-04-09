@@ -1,14 +1,12 @@
 package com.casy.casyaiagent.controller;
 
 
+import cn.hutool.core.util.ObjectUtil;
 import com.casy.casyaiagent.agent.CasyManus;
 import com.casy.casyaiagent.ai.LoveApp;
 import com.casy.casyaiagent.constant.Global;
-import jakarta.annotation.Resource;
+import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.annotation.Scope;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,11 +16,15 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @RestController
 @RequestMapping("/ai")
 public class AiController {
+
+    private Map<String, CasyManus> casyManusMap = new ConcurrentHashMap<>();
 
     // 使用 ObjectProvider 获取 Prototype 作用域的 CasyManus 实例
     // 这样每次调用 getIfAvailable() 都会创建新的实例
@@ -141,14 +143,25 @@ public class AiController {
      */
     @GetMapping("/manus/chat")
     public SseEmitter doChatWithManus(String message, String chatId) {
-        // 获取新的 CasyManus 实例（Prototype 作用域，每次获取都是新的）
-        CasyManus casyManus = Global.getBean(CasyManus.class);
+        CasyManus casyManus = casyManusMap.computeIfAbsent(chatId, k -> {
+            log.info("创建新的 CasyManus 会话: chatId={}", k);
+            return Global.getBean(CasyManus.class);
+        });
         
-        // 如果传入了 chatId，设置对话ID以保持记忆
-        if (chatId != null && !chatId.isEmpty()) {
-            casyManus.setConversationId(chatId);
-        }
+        // 重置实例状态，以便可以再次执行
+        casyManus.resetState();
         
         return casyManus.runStream(message);
+    }
+
+    /**
+     * 移除指定的会话
+     * @param chatId 对话ID
+     */
+    @GetMapping("/manus/delete/chat")
+    public void deleteChatWithManus(String chatId) {
+         if (ObjectUtil.isNotNull(casyManusMap.get(chatId))) {
+             casyManusMap.remove(chatId);
+         }
     }
 }

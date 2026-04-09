@@ -4,12 +4,12 @@ spring:
   application:
     name: casy-ai-agent
   # 数据库配置
-  datasource:
-    # mysql配置
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/casy-ai?allowMultiQueries=true
-    username: root
-    password: root
+#  datasource:
+#    # mysql配置
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://localhost:3306/casy-ai?allowMultiQueries=true
+#    username: root
+#    password: root
 #     driver-class-name: org.postgresql.Driver
 #     url: jdbc:postgresql://pgm-2zej9ksewfj9yw903o.rwlb.rds.aliyuncs.com:5432/casy_aip_agent
 #     username: my_user
@@ -19,8 +19,9 @@ spring:
       memory:
         repository:
           jdbc:
-            initialize-schema: always
-            schema: classpath:/sql/schema-postgresql.sql # 无效？？
+            initialize-schema: always  # 自动创建表结构
+            # schema: classpath:/sql/schema-mysql.sql  # MySQL 使用这个
+            # schema: classpath:/sql/schema-postgresql.sql  # PostgreSQL 使用这个
 #    mcp:
 #      client:
 #        stdio:

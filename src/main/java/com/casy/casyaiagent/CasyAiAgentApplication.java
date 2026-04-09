@@ -5,13 +5,17 @@ import org.springframework.ai.model.chat.memory.repository.jdbc.autoconfigure.Jd
 import org.springframework.ai.tool.execution.ToolExecutionExceptionProcessor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 
 
 /**
  * @author linlin
  */
 @SpringBootApplication(
-        exclude = {JdbcChatMemoryRepositoryAutoConfiguration.class})
+        exclude = {
+                JdbcChatMemoryRepositoryAutoConfiguration.class,
+                DataSourceAutoConfiguration.class  // 禁用数据源自动配置
+        })
 public class CasyAiAgentApplication {
 
     public static void main(String[] args) {

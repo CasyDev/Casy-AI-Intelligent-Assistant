@@ -296,6 +296,17 @@ public abstract class BaseAgent {
     }
 
     /**
+     * 重置状态，用于复用实例时重置为可执行状态
+     */
+    public void resetState() {
+        this.state = AgentState.IDLE;
+        this.currentStep = 0;
+        this.consecutiveErrorCount = 0;
+        // 注意：不清空 messageList，保留对话历史
+        log.debug("[{}] 状态已重置，可以再次执行", this.getName());
+    }
+
+    /**
      * 清理资源
      */
     protected void cleanup() {
