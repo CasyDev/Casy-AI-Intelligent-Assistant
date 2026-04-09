@@ -42,3 +42,9 @@ u_api_pro:
 amap:
   api:
     key: xxxxxxxxx  # 从环境变量读取，部署时设置 AMAP_API_KEY
+
+
+# Pexels API 密钥
+pexels:
+  api:
+    key: XXXXXX
