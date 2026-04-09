@@ -13,6 +13,12 @@
   <i>专注于恋爱心理领域的 AI 咨询专家，支持联网搜索、天气查询、文件操作等丰富工具</i>
 </p>
 
+<p align="center">
+  <a href="https://casy-ai-frontend-243896-4-1420308619.sh.run.tcloudbase.com" target="_blank">
+    <img src="https://img.shields.io/badge/🚀-在线演示-green?style=for-the-badge" alt="在线演示">
+  </a>
+</p>
+
 ---
 
 ## 📖 项目简介
