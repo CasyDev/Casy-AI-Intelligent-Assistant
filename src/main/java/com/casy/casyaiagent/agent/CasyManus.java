@@ -1,13 +1,12 @@
 package com.casy.casyaiagent.agent;
 
-import lombok.extern.slf4j.Slf4j;
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.execution.ToolExecutionExceptionProcessor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -28,13 +27,18 @@ public class CasyManus extends ToolCallAgent {
     // 依赖组件，用于重建 ChatClient
     private final ChatModel chatModel;
     private final ToolCallbackProvider toolCallbackProvider;
+    private final boolean multiModel;
 
-    public CasyManus(ToolCallback[] availableTools, ChatModel dashscopeChatModel, ToolExecutionExceptionProcessor toolExecutionExceptionProcessor, ToolCallbackProvider toolCallbackProvider) {
-        super(availableTools, toolExecutionExceptionProcessor);
+    public CasyManus(ToolCallback[] availableTools, ChatModel dashscopeChatModel,
+                     ToolExecutionExceptionProcessor toolExecutionExceptionProcessor,
+                     ToolCallbackProvider toolCallbackProvider,
+                     @Value("${spring.ai.dashscope.chat.options.multi-model:false}") boolean multiModel) {
+        super(availableTools, toolExecutionExceptionProcessor, multiModel);
         this.setName("casyManus");
         // 保存依赖，以便后续重建 ChatClient
         this.chatModel = dashscopeChatModel;
         this.toolCallbackProvider = toolCallbackProvider;
+        this.multiModel = multiModel;
 
         int maxSteps = 10;
         int planSteps = maxSteps / 3;
@@ -125,10 +129,12 @@ public class CasyManus extends ToolCallAgent {
     }
 
     private void initChatClient() {
-        ChatClient chatClient = ChatClient.builder(chatModel)
+        ChatClient.Builder builder = ChatClient.builder(chatModel)
 //                .defaultAdvisors(new PromptLoggingAdvisor())
-                .defaultToolCallbacks(toolCallbackProvider)
-                .build();
-        this.setChatClient(chatClient);
+                .defaultToolCallbacks(toolCallbackProvider);
+        if (multiModel) {
+            builder.defaultOptions(DashScopeChatOptions.builder().multiModel(true).build());
+        }
+        this.setChatClient(builder.build());
     }
 }

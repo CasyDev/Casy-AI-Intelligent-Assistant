@@ -51,7 +51,7 @@
           </div>
 
           <!-- 应用卡片网格 -->
-          <div class="grid md:grid-cols-2 gap-8 mb-16">
+          <div class="grid md:grid-cols-3 gap-8 mb-16">
             <!-- AI 恋爱大师 -->
             <router-link
                 to="/love-app"
@@ -81,6 +81,44 @@
                 </p>
 
                 <div class="flex items-center text-pink-400 text-sm font-medium">
+                  <span>开始对话</span>
+                  <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none"
+                       stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </div>
+              </div>
+            </router-link>
+
+            <!-- 企业智能客服 -->
+            <router-link
+                to="/customer-service"
+                class="group relative bg-kimi-card border border-kimi-border rounded-2xl p-8 hover:border-cyan-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-cyan-500/10"
+            >
+              <div
+                  class="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"/>
+
+              <div class="relative">
+                <div class="flex items-start justify-between mb-6">
+                  <div
+                      class="w-16 h-16 bg-gradient-to-br from-cyan-500 to-teal-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-cyan-500/20">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                    </svg>
+                  </div>
+                  <div class="flex gap-2">
+                    <span class="px-3 py-1 bg-cyan-500/10 text-cyan-400 text-xs rounded-full border border-cyan-500/20">RAG</span>
+                    <span class="px-3 py-1 bg-cyan-500/10 text-cyan-400 text-xs rounded-full border border-cyan-500/20">知识库</span>
+                  </div>
+                </div>
+
+                <h3 class="text-2xl font-semibold text-white mb-3">企业智能客服</h3>
+                <p class="text-kimi-text-secondary mb-6 leading-relaxed">
+                  星河云智能客服，基于 Markdown 知识库做 RAG 检索增强。咨询产品、账号、套餐、售后与合规政策，回答有据可依。
+                </p>
+
+                <div class="flex items-center text-cyan-400 text-sm font-medium">
                   <span>开始对话</span>
                   <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none"
                        stroke="currentColor" viewBox="0 0 24 24">

@@ -1,5 +1,6 @@
 package com.casy.casyaiagent.ai;
 
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.casy.casyaiagent.advisor.PromptLoggingAdvisor;
 import com.casy.casyaiagent.constant.Global;
 import com.casy.casyaiagent.rag.component.BaiduTranslationQueryTransformer;
@@ -23,6 +24,8 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
@@ -40,7 +43,6 @@ public class LoveApp {
     private final ChatClient chatClient;
     private final MessageChatMemoryAdvisor chatMemoryAdvisor;
     private final VectorStore loveAppVectorStore;
-    private final VectorStore pgVectorVectorStore;
     private final LoveAppPromptTemplate loveAppPromptTemplate;
     // 云知识库
     private final Advisor loveAppRagCloudAdvisor;
@@ -50,15 +52,15 @@ public class LoveApp {
     private ToolCallbackProvider toolCallbackProvider;
 
     public LoveApp(ChatModel dashscopChatModel, MessageChatMemoryAdvisor chatMemoryAdvisor,
-                   VectorStore loveAppVectorStore, VectorStore pgVectorVectorStore,
+                   @Qualifier("loveAppVectorStore") VectorStore loveAppVectorStore,
                    LoveAppPromptTemplate loveAppPromptTemplate, Advisor loveAppRagCloudAdvisor,
                    ToolCallbackProvider toolCallbackProvider,
-                   ToolCallback[] allTools) {
+                   ToolCallback[] allTools,
+                   @Value("${spring.ai.dashscope.chat.options.multi-model:false}") boolean multiModel) {
         this.loveAppPromptTemplate = loveAppPromptTemplate;
         this.chatMemoryAdvisor = chatMemoryAdvisor;
         this.loveAppVectorStore = loveAppVectorStore;
         this.loveAppRagCloudAdvisor = loveAppRagCloudAdvisor;
-        this.pgVectorVectorStore = pgVectorVectorStore;
         this.toolCallbackProvider = toolCallbackProvider;
         this.allTools = allTools;
         // var 是 Java 10 引入的局部变量类型推断关键字，核心作用是让编译器根据变量赋值语句的右侧表达式，自动推断出局部变量的具体类型，从而简化代码书写
@@ -68,9 +70,13 @@ public class LoveApp {
                 .build();
 
         // RetrievalAugmentationAdvisor是功能更强大的QuestionAnswerAdvisor支持高级的RAG流程比如结合查询转换器
+        ChatClient.Builder rewriteClientBuilder = ChatClient.builder(dashscopChatModel);
+        if (multiModel) {
+            rewriteClientBuilder.defaultOptions(DashScopeChatOptions.builder().multiModel(true).build());
+        }
         Advisor retrievalAugmentationAdvisor = RetrievalAugmentationAdvisor.builder()
                 .queryTransformers(RewriteQueryTransformer.builder()
-                        .chatClientBuilder(ChatClient.builder(dashscopChatModel).build().mutate())
+                        .chatClientBuilder(rewriteClientBuilder.build().mutate())
                         .build())
                 .documentRetriever(VectorStoreDocumentRetriever.builder()
                         .similarityThreshold(0.50)
@@ -83,15 +89,18 @@ public class LoveApp {
                 .build();
 
 
-        chatClient = ChatClient.builder(dashscopChatModel)
+        ChatClient.Builder chatClientBuilder = ChatClient.builder(dashscopChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(
                         chatMemoryAdvisor,//对话记忆
                         new PromptLoggingAdvisor() //自定义日志
 //                        new ReReadingAdvisor() //重读Advisor，提高ai的准确性，但增加token的消耗
 //                        ,qaAdvisor // QuestionAnswerAdvisor的默认实现和自定义searchRequest以实现更灵活的查询
-                )
-                .build();
+                );
+        if (multiModel) {
+            chatClientBuilder.defaultOptions(DashScopeChatOptions.builder().multiModel(true).build());
+        }
+        chatClient = chatClientBuilder.build();
     }
 
     public String doChat(String message, String chatId) {

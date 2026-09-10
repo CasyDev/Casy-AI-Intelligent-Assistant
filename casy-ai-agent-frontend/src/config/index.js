@@ -28,6 +28,9 @@ const config = {
     get loveAppSseUrl() {
       return `${this.apiBaseUrl}${this.apiPrefix}/ai/love_app/chat/sse`
     },
+    get customerServiceSseUrl() {
+      return `${this.apiBaseUrl}${this.apiPrefix}/ai/customer_service/chat/sse`
+    },
     // 应用标题
     appTitle: import.meta.env.VITE_APP_TITLE || 'CASY AI Agent',
     // 是否开启调试
@@ -47,6 +50,9 @@ const config = {
     get loveAppSseUrl() {
       return `${this.apiBaseUrl}${this.apiPrefix}/ai/love_app/chat/sse`
     },
+    get customerServiceSseUrl() {
+      return `${this.apiBaseUrl}${this.apiPrefix}/ai/customer_service/chat/sse`
+    },
     appTitle: import.meta.env.VITE_APP_TITLE || 'CASY AI Agent',
     debug: false,
   }
@@ -65,6 +71,7 @@ export const {
   apiPrefix, 
   sseUrl,
   loveAppSseUrl,
+  customerServiceSseUrl,
   appTitle, 
   debug 
 } = currentConfig

@@ -41,18 +41,33 @@ public class ToolCallAgent extends ReActAgent {
     private final ToolCallingManager toolCallingManager;
     // 禁用内置的工具调用机制，自己维护上下文
     private final ChatOptions chatOptions;
+    // 无工具调用时使用（如最终总结），避免 1.1.0.0-RC2 把 yaml 里的 multi-model 覆盖成 false
+    private final ChatOptions completionOptions;
     // 保存了工具调用信息的响应
     private ChatResponse toolCallChatResponse;
     // 标记是否需要生成最终总结（调用终止工具后需要再生成一次总结回复）
     private boolean needFinalSummary = false;
 
     public ToolCallAgent(ToolCallback[] availableTools, ToolExecutionExceptionProcessor toolExecutionExceptionProcessor) {
+        this(availableTools, toolExecutionExceptionProcessor, false);
+    }
+
+    public ToolCallAgent(ToolCallback[] availableTools, ToolExecutionExceptionProcessor toolExecutionExceptionProcessor,
+                         boolean multiModel) {
         super();
         this.availableTools = availableTools;
         this.toolCallingManager = DefaultToolCallingManager.builder().toolExecutionExceptionProcessor(toolExecutionExceptionProcessor).build();
         // 禁用 Spring AI 内置的工具调用机制，自己维护选项和消息上下文
-        this.chatOptions = DashScopeChatOptions.builder().toolCallbacks(List.of(this.availableTools)).internalToolExecutionEnabled(false)  // 禁用内部工具执行
-                .build();
+        DashScopeChatOptions.DashScopeChatOptionsBuilder toolOptionsBuilder = DashScopeChatOptions.builder()
+                .toolCallbacks(List.of(this.availableTools))
+                .internalToolExecutionEnabled(false);
+        DashScopeChatOptions.DashScopeChatOptionsBuilder completionOptionsBuilder = DashScopeChatOptions.builder();
+        if (multiModel) {
+            toolOptionsBuilder.multiModel(true);
+            completionOptionsBuilder.multiModel(true);
+        }
+        this.chatOptions = toolOptionsBuilder.build();
+        this.completionOptions = completionOptionsBuilder.build();
     }
 
     /**
@@ -240,8 +255,8 @@ public class ToolCallAgent extends ReActAgent {
                 """));
             
             // 让 AI 生成最终回复（不启用工具调用）
-            // 使用空的 chatOptions，不传递工具，避免 AI 再次调用工具
-            Prompt finalPrompt = new Prompt(getMessageList());
+            // 不传递工具，避免 AI 再次调用工具；仍带上 multiModel，否则会打到错误的文本端点
+            Prompt finalPrompt = new Prompt(getMessageList(), completionOptions);
             ChatResponse finalResponse = getChatClient().prompt(finalPrompt).system(getSystemPrompt()).call().chatResponse();
             AssistantMessage finalMessage = finalResponse.getResult().getOutput();
             

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/views/Home.vue'
 import LoveApp from '@/views/LoveApp.vue'
+import CustomerServiceApp from '@/views/CustomerServiceApp.vue'
 import CasyManus from '@/views/CasyManus.vue'
 
 const routes = [
@@ -15,6 +16,12 @@ const routes = [
     name: 'LoveApp',
     component: LoveApp,
     meta: { title: 'AI 恋爱大师' }
+  },
+  {
+    path: '/customer-service',
+    name: 'CustomerService',
+    component: CustomerServiceApp,
+    meta: { title: '企业智能客服' }
   },
   {
     path: '/casy-manus',

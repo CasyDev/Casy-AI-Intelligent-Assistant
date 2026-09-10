@@ -3,6 +3,7 @@ package com.casy.casyaiagent.controller;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.casy.casyaiagent.agent.CasyManus;
+import com.casy.casyaiagent.ai.CustomerServiceApp;
 import com.casy.casyaiagent.ai.LoveApp;
 import com.casy.casyaiagent.constant.Global;
 import dev.langchain4j.agent.tool.P;
@@ -50,6 +51,14 @@ public class AiController {
     @GetMapping(value = "/love_app/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> doChatWithLoveAppSse(String message, String chatId) {
         return Global.getBean(LoveApp.class).doChatByStream(message, chatId);
+    }
+
+    /**
+     * 企业智能客服流式对话（RAG 知识库增强）
+     */
+    @GetMapping(value = "/customer_service/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> doChatWithCustomerServiceSse(String message, String chatId) {
+        return Global.getBean(CustomerServiceApp.class).doChatByStream(message, chatId);
     }
 
     /**
