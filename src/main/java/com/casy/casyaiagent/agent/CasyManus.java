@@ -94,6 +94,11 @@ public class CasyManus extends ToolCallAgent {
                 
                 **记住：如果你回复的内容包含"请告诉我"、"请提供"、"我需要知道"等字样，说明你只是口头提示，这是错误的！**
                 **正确的做法是立即调用 requestUserInput 工具！**
+                
+                【PDF 生成 - 必须遵守】
+                用户要求生成 PDF、报告、摘要文档时，必须调用 generatePDF。
+                禁止用 writeFile 把内容存成 HTML/TXT 然后声称任务完成。
+                即使 generatePDF 报文件占用，也要换文件名再调用 generatePDF，不要改存 HTML。
                 """, maxSteps, planSteps, maxSteps, checkInterval);
         this.setSystemPrompt(systemPrompt);
 
@@ -116,6 +121,9 @@ public class CasyManus extends ToolCallAgent {
                 【再次提醒 - requestUserInput 工具】
                 如果你发现缺少用户必要信息（如目的地、时间、预算等），**必须调用 requestUserInput 工具**！
                 绝对不要只是口头说"请告诉我..."，那样工具不会被执行！
+                
+                【PDF】用户要 PDF 时必须调用 generatePDF，不要用 writeFile 保存 HTML 交差。
+                生成成功后不要写 localhost:3000、磁盘路径或 /pdf/xxx.pdf 这类前端链接，前端会提供下载按钮。
                 """, maxSteps);
         this.setNextStepPrompt(nextStepPrompt);
 

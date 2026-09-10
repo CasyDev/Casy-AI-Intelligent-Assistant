@@ -15,7 +15,7 @@
         </div>
         <div>
           <h1 class="text-white font-semibold">AI 超级智能体</h1>
-          <p class="text-xs text-kimi-text-muted">自动规划 · 工具调用 · 任务执行</p>
+          <p class="text-xs text-kimi-text-muted">ReAct 规划 · Offer 邮件 · PDF · 地图出行 · 联网搜索</p>
         </div>
       </div>
       <div class="flex items-center space-x-2">
@@ -36,22 +36,47 @@
     </header>
 
     <!-- 聊天区域 -->
-    <div class="flex-1 overflow-y-auto" ref="chatContainer">
+    <div class="flex-1 overflow-y-auto" ref="chatContainer" @click="handleGeneratedFileClick">
       <div class="max-w-4xl mx-auto py-6 px-4 space-y-4">
         <!-- 欢迎消息 -->
-        <div v-if="messages.length === 0" class="text-center py-12">
-          <div class="w-16 h-16 bg-gradient-to-br from-kimi-primary/20 to-purple-600/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-kimi-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-            </svg>
+        <div v-if="messages.length === 0" class="py-8">
+          <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-gradient-to-br from-kimi-primary/20 to-purple-600/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-kimi-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-white mb-2">我是你的 AI 超级智能体</h3>
+            <p class="text-kimi-text-secondary max-w-xl mx-auto">
+              采用 ReAct 架构：先规划再执行。可串联搜索、地图、邮件、PDF 等多种工具，缺信息时会主动问你。
+            </p>
           </div>
-          <h3 class="text-xl font-semibold text-white mb-2">我是你的 AI 超级智能体</h3>
-          <p class="text-kimi-text-secondary mx-auto mb-6 whitespace-nowrap">
-            我可以帮你完成复杂任务，自动规划步骤、调用工具、执行操作。
-          </p>
+
+          <div class="grid sm:grid-cols-2 gap-3 mb-8">
+            <div
+              v-for="capability in capabilities"
+              :key="capability.title"
+              class="text-left bg-kimi-card border border-kimi-border rounded-xl p-4 hover:border-kimi-primary/40 transition-colors"
+            >
+              <div class="flex items-start space-x-3">
+                <div
+                  class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                  :class="capability.iconWrap"
+                >
+                  <span class="text-base" aria-hidden="true">{{ capability.emoji }}</span>
+                </div>
+                <div>
+                  <h4 class="text-white text-sm font-semibold mb-1">{{ capability.title }}</h4>
+                  <p class="text-kimi-text-secondary text-xs leading-relaxed">{{ capability.desc }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-center text-xs text-kimi-text-muted mb-3">试试这些任务</p>
           <div class="flex flex-wrap justify-center gap-2">
-            <button 
-              v-for="prompt in quickPrompts" 
+            <button
+              v-for="prompt in quickPrompts"
               :key="prompt"
               @click="sendMessage(prompt)"
               class="px-4 py-2 bg-kimi-card hover:bg-kimi-border border border-kimi-border rounded-full text-sm text-kimi-text-secondary hover:text-white transition-colors"
@@ -182,6 +207,19 @@
                     </svg>
                   </div>
                 </button>
+                <div v-if="message.downloadPath" class="px-4 py-3 flex items-center justify-between gap-3 bg-kimi-primary/10 border-t border-kimi-tool/20">
+                  <div class="min-w-0">
+                    <p class="text-white text-sm font-medium truncate">{{ message.fileName }}</p>
+                    <p class="text-xs text-kimi-text-muted">文件已生成，可点击下载</p>
+                  </div>
+                  <button
+                    type="button"
+                    @click.stop="downloadGeneratedFile(message.downloadPath, message.fileName)"
+                    class="flex-shrink-0 px-3 py-1.5 bg-kimi-primary hover:bg-kimi-primary-hover text-white text-sm rounded-lg transition-colors"
+                  >
+                      {{ isPdfFile(message.fileName) ? '下载 PDF' : '下载文件' }}
+                  </button>
+                </div>
                 <div v-show="message.expanded" class="px-4 py-3">
                   <div v-if="message.toolParams" class="mb-2">
                     <div class="text-xs text-kimi-text-muted mb-1">参数</div>
@@ -251,6 +289,24 @@
               </div>
             </div>
           </div>
+
+          <div v-if="isExecuting && !waitingForInput" class="flex justify-start mb-6 animate-fade-in">
+            <div class="flex items-start space-x-3">
+              <div class="w-8 h-8 bg-gradient-to-br from-kimi-primary to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              </div>
+              <div class="bg-kimi-ai-msg px-4 py-3 rounded-2xl rounded-tl-sm border border-kimi-border">
+                <div class="flex items-center space-x-3">
+                  <div class="flex space-x-1">
+                    <div class="w-2 h-2 bg-kimi-primary rounded-full animate-bounce"></div>
+                    <div class="w-2 h-2 bg-kimi-primary rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                    <div class="w-2 h-2 bg-kimi-primary rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                  </div>
+                  <span class="text-sm text-kimi-text-secondary">{{ executingHint }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </template>
       </div>
     </div>
@@ -280,7 +336,7 @@
           </button>
         </form>
         <p class="text-xs text-kimi-text-muted mt-2 text-center">
-          {{ waitingForInput ? 'AI 正在等待您的补充信息' : 'AI 超级智能体可调用多种工具完成任务，执行过程可能需要一些时间' }}
+          {{ waitingForInput ? 'AI 正在等待您的补充信息' : '可调用 Offer 邮件、PDF、地图出行、联网搜索、终端等工具，多步任务会自动规划' }}
         </p>
       </div>
     </div>
@@ -288,7 +344,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, onUnmounted } from 'vue'
+import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import config from '../config'
@@ -309,15 +365,134 @@ const currentChatId = ref(null)  // 当前对话ID，用于保持对话记忆
 const currentStep = ref(0)
 const totalSteps = ref(10)
 
+const executingHint = computed(() => {
+  const last = [...messages.value].reverse().find(m => m.role !== 'user')
+  if (!last) return '正在思考并规划任务...'
+  if (last.type === 'plan') return '正在按计划执行...'
+  if (last.type === 'step') return '正在执行当前步骤...'
+  if (last.type === 'tool') return '正在调用工具...'
+  if (last.type === 'thinking') return '正在思考下一步...'
+  if (last.role === 'assistant') return '正在整理结果...'
+  return '正在处理中...'
+})
+
 // 快捷提示
-const quickPrompts = [
-  '查询北京今天的天气',
-  '搜索附近的餐厅推荐',
-  '帮我规划一次旅行',
-  '查询上海到北京的路线'
+const capabilities = [
+  {
+    emoji: '📧',
+    iconWrap: 'bg-rose-500/15',
+    title: 'Offer 邮件发送',
+    desc: '按候选人、岗位、薪资等信息生成录用通知并发送到指定邮箱。'
+  },
+  {
+    emoji: '📄',
+    iconWrap: 'bg-amber-500/15',
+    title: 'PDF 与文件',
+    desc: '把调研结果做成 PDF 报告，读写本地文件，也可按链接下载资源。'
+  },
+  {
+    emoji: '🗺️',
+    iconWrap: 'bg-emerald-500/15',
+    title: '出行与生活',
+    desc: '高德地图查天气、周边餐厅、驾车/步行/公交路线，适合行程规划。'
+  },
+  {
+    emoji: '🔎',
+    iconWrap: 'bg-sky-500/15',
+    title: '联网检索',
+    desc: '百度搜索、网页抓取、图片检索，再把多步结果汇总给你。'
+  },
+  {
+    emoji: '💻',
+    iconWrap: 'bg-violet-500/15',
+    title: '终端执行',
+    desc: '在本机执行命令完成运维或脚本类任务（请谨慎描述需求）。'
+  },
+  {
+    emoji: '💬',
+    iconWrap: 'bg-kimi-primary/15',
+    title: '主动追问',
+    desc: '缺目的地、邮箱、时间等信息时会停下来问你，而不是瞎猜。'
+  }
 ]
 
-// 配置 marked
+const quickPrompts = [
+  '给候选人发一封 Java 工程师 Offer 邮件',
+  '搜索 Spring AI 并生成一份 PDF 摘要',
+  '查杭州天气，再推荐附近适合聚餐的餐厅',
+  '规划上海到杭州的驾车路线'
+]
+
+const escapeAttr = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/"/g, '&quot;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+
+const parseGeneratedFileHref = (href) => {
+  if (!href) return ''
+  const raw = String(href).trim()
+  const relMatch = raw.match(/^(?:\.\/)?(pdf|file|download)\/([^/?#]+)$/i)
+  if (relMatch) {
+    return `${relMatch[1].toLowerCase()}/${relMatch[2]}`
+  }
+  try {
+    const url = new URL(raw, window.location.origin)
+    const path = decodeURIComponent(url.pathname)
+    const apiMatch = path.match(/\/files\/(pdf|file|download)\/(.+)$/i)
+    if (apiMatch) {
+      return `${apiMatch[1].toLowerCase()}/${apiMatch[2]}`
+    }
+    const routeMatch = path.match(/\/(pdf|file|download)\/(.+)$/i)
+    if (routeMatch) {
+      return `${routeMatch[1].toLowerCase()}/${routeMatch[2]}`
+    }
+  } catch {
+    return ''
+  }
+  return ''
+}
+
+const extractDownloadInfo = (text) => {
+  if (!text) return null
+  const marker = text.match(/\[DOWNLOAD:([^\]]+)\]/)
+  if (marker) {
+    const downloadPath = marker[1].trim()
+    return { downloadPath, fileName: downloadPath.split('/').pop() }
+  }
+  const mdLink = text.match(/\]\(([^)]+)\)/)
+  if (mdLink) {
+    const downloadPath = parseGeneratedFileHref(mdLink[1])
+    if (downloadPath) {
+      return { downloadPath, fileName: downloadPath.split('/').pop() }
+    }
+  }
+  const bare = text.match(/(?:^|[\s(/\\])((?:pdf|file|download)[/\\][^\s)\]"'<>]+\.\w+)/i)
+  if (bare) {
+    const downloadPath = bare[1].replace(/\\/g, '/')
+    return { downloadPath, fileName: downloadPath.split('/').pop() }
+  }
+  return null
+}
+
+const isPdfFile = (fileName) => /\.pdf$/i.test(fileName || '')
+
+marked.use({
+  breaks: true,
+  renderer: {
+    link({ href, title, text }) {
+      const filePath = parseGeneratedFileHref(href)
+      if (filePath) {
+        const url = getGeneratedFileUrl(filePath)
+        const name = filePath.split('/').pop()
+        return `<a href="${escapeAttr(url)}" download="${escapeAttr(name)}" data-download-path="${escapeAttr(filePath)}" rel="noopener">${text}</a>`
+      }
+      const titleAttr = title ? ` title="${escapeAttr(title)}"` : ''
+      return `<a href="${escapeAttr(href)}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`
+    }
+  }
+})
+
 marked.setOptions({
   highlight: function(code, lang) {
     if (lang && hljs.getLanguage(lang)) {
@@ -328,9 +503,53 @@ marked.setOptions({
   breaks: true
 })
 
-// 渲染 Markdown
 const renderMarkdown = (content) => {
-  return marked(content)
+  return marked(content || '')
+}
+
+const getGeneratedFileUrl = (relativePath) => {
+  const encoded = relativePath.split('/').map(encodeURIComponent).join('/')
+  return `${config.apiBaseUrl}${config.apiPrefix}/files/${encoded}`
+}
+
+const downloadGeneratedFile = async (relativePath, fileName) => {
+  if (!relativePath) return
+  const apiUrl = getGeneratedFileUrl(relativePath)
+  const name = fileName || relativePath.split('/').pop() || 'download.pdf'
+  try {
+    const response = await fetch(apiUrl)
+    if (!response.ok) {
+      throw new Error(`download failed: ${response.status}`)
+    }
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = name
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Download file error:', error)
+    const link = document.createElement('a')
+    link.href = apiUrl
+    link.download = name
+    link.rel = 'noopener'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  }
+}
+
+const handleGeneratedFileClick = (event) => {
+  const anchor = event.target?.closest?.('a')
+  if (!anchor) return
+  const filePath = anchor.dataset.downloadPath || parseGeneratedFileHref(anchor.getAttribute('href'))
+  if (!filePath) return
+  event.preventDefault()
+  event.stopPropagation()
+  downloadGeneratedFile(filePath, anchor.getAttribute('download') || filePath.split('/').pop())
 }
 
 // 自动调整文本框高度
@@ -422,12 +641,16 @@ const parseMessage = (data) => {
       if (content.includes('工具') && content.includes('执行完成')) {
         const toolMatch = content.match(/工具 (\w+) 执行完成，结果:\s*(.+)/s)
         if (toolMatch) {
+          const rawResult = toolMatch[2]
+          const downloadInfo = extractDownloadInfo(rawResult)
           return {
             type: 'tool',
             toolName: toolMatch[1],
-            content: toolMatch[2],
+            content: rawResult.replace(/\[DOWNLOAD:[^\]]+\]/g, '').trim(),
             toolParams: {},
-            expanded: false  // 默认折叠
+            expanded: false,
+            downloadPath: downloadInfo?.downloadPath || '',
+            fileName: downloadInfo?.fileName || ''
           }
         }
       }
@@ -501,9 +724,12 @@ const parseMessage = (data) => {
   }
   
   // 默认作为 AI 回复
+  const downloadInfo = extractDownloadInfo(data)
   return {
     role: 'assistant',
-    content: data
+    content: data.replace(/\[DOWNLOAD:[^\]]+\]/g, '').trim(),
+    downloadPath: downloadInfo?.downloadPath || '',
+    fileName: downloadInfo?.fileName || ''
   }
 }
 
@@ -566,11 +792,15 @@ const sendMessage = async (text) => {
         const lastMsg = messages.value[messages.value.length - 1]
         if (lastMsg.type === 'tool' && lastMsg.toolName === parsed.toolName) {
           lastMsg.content = parsed.content
+          if (parsed.downloadPath && lastMsg.downloadPath !== parsed.downloadPath) {
+            lastMsg.downloadPath = parsed.downloadPath
+            lastMsg.fileName = parsed.fileName
+          }
           scrollToBottom()
           return
         }
       }
-      
+
       messages.value.push(parsed)
       scrollToBottom()
     }

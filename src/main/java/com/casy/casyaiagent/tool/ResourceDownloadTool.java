@@ -16,7 +16,7 @@ public class ResourceDownloadTool {
 
     @Tool(description = "从给定的URL下载资源")
     public String downloadResource(@ToolParam(description = "资源下载链接") String url, @ToolParam(description = "保存下载资源的文件名称") String fileName) {
-        String fileDir = FileConstant.FILE_SAVE_DIR + "/download";
+        String fileDir = FileConstant.getFileSaveDir() + "/download";
         String filePath = fileDir + "/" + fileName;
         try {
             // 创建目录

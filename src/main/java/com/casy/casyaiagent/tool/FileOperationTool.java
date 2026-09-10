@@ -11,11 +11,13 @@ import org.springframework.ai.tool.annotation.ToolParam;
  */
 public class FileOperationTool {
 
-    private final String FILE_DIR = FileConstant.FILE_SAVE_DIR + "/file";
+    private String fileDir() {
+        return FileConstant.getFileSaveDir() + "/file";
+    }
 
     @Tool(description = "读取文件中的内容")
     public String readFile(@ToolParam(description = "要读取的文件名称") String fileName) {
-        String filePath = FILE_DIR + "/" + fileName;
+        String filePath = fileDir() + "/" + fileName;
         try {
             return FileUtil.readUtf8String(filePath);
         } catch (Exception e) {
@@ -23,14 +25,17 @@ public class FileOperationTool {
         }
     }
 
-    @Tool(description = "写入文件")
+    @Tool(description = "写入普通文本文件（如 .txt/.md/.json）。禁止用来生成 PDF，也禁止把 PDF 内容存成 HTML。用户要 PDF 必须调用 generatePDF。")
     public String writeFile(
         @ToolParam(description = "要写入的文件名称") String fileName,
         @ToolParam(description = "要写入文件的内容") String content) {
-        String filePath = FILE_DIR + "/" + fileName;
+        String name = fileName == null ? "" : fileName.toLowerCase();
+        if (name.endsWith(".pdf") || name.endsWith(".html") || name.endsWith(".htm")) {
+            return "已拒绝：writeFile 不能生成 PDF，也不能用 HTML 代替 PDF。请立即调用 generatePDF（fileName 以 .pdf 结尾，isHtml=true，content 用简洁 HTML）。";
+        }
+        String filePath = fileDir() + "/" + fileName;
         try {
-            // 创建目录
-            FileUtil.mkdir(FILE_DIR);
+            FileUtil.mkdir(fileDir());
             FileUtil.writeUtf8String(content, filePath);
             return "File written successfully to: " + filePath;
         } catch (Exception e) {

@@ -28,6 +28,14 @@ const routes = [
     name: 'CasyManus',
     component: CasyManus,
     meta: { title: 'AI 超级智能体' }
+  },
+  {
+    path: '/:category(pdf|file|download)/:fileName',
+    name: 'GeneratedFile',
+    beforeEnter: (to) => {
+      const { category, fileName } = to.params
+      window.location.replace(`/api/files/${category}/${encodeURIComponent(fileName)}`)
+    }
   }
 ]
 
