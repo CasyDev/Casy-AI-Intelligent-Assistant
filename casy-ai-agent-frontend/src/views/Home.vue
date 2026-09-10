@@ -16,11 +16,21 @@
               <p class="text-xs text-kimi-text-secondary">基于 Spring AI 的企业级智能体平台</p>
             </div>
           </div>
-          <a href="https://gitee.com/linlinyes/casy-ai-agent" target="_blank"
-             class="text-kimi-text-secondary hover:text-white transition-colors flex items-center space-x-2">
-            <img src="@/assets/giteeIcon.png" style="width: 20px; height: 20px;" />
-            <span class="text-sm">Gitee</span>
-          </a>
+          <div class="flex items-center space-x-4">
+            <a href="https://github.com/CasyDev/Casy-AI-Intelligent-Assistant" target="_blank" rel="noopener noreferrer"
+               class="text-kimi-text-secondary hover:text-white transition-colors flex items-center space-x-2"
+               title="GitHub">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.726-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.42-1.305.763-1.605-2.665-.303-5.466-1.332-5.466-5.93 0-1.31.468-2.382 1.236-3.222-.124-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.873.12 3.176.77.84 1.235 1.912 1.235 3.222 0 4.61-2.807 5.624-5.48 5.921.432.372.816 1.103.816 2.222 0 1.606-.015 2.896-.015 3.286 0 .322.216.694.825.576C20.565 21.796 24 17.297 24 12 24 5.37 18.63 0 12 0z"/>
+              </svg>
+              <span class="text-sm">GitHub</span>
+            </a>
+            <a href="https://gitee.com/linlinyes/casy-ai-agent" target="_blank" rel="noopener noreferrer"
+               class="text-kimi-text-secondary hover:text-white transition-colors flex items-center space-x-2">
+              <img src="@/assets/giteeIcon.png" style="width: 20px; height: 20px;" />
+              <span class="text-sm">Gitee</span>
+            </a>
+          </div>
         </div>
       </div>
     </header>
